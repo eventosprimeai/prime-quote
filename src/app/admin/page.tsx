@@ -9,8 +9,18 @@ export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirigir directamente al dashboard
-    router.replace("/admin/dashboard");
+    // Check if authenticated, redirect accordingly
+    fetch("/api/auth/me")
+      .then((res) => {
+        if (res.ok) {
+          router.replace("/admin/dashboard");
+        } else {
+          router.replace("/auth/login");
+        }
+      })
+      .catch(() => {
+        router.replace("/auth/login");
+      });
   }, [router]);
 
   return (

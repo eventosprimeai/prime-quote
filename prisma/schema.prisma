@@ -8,14 +8,16 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
+  id        String           @id @default(cuid())
+  email     String           @unique
   password  String
   name      String
-  role      String    @default("admin")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  role      String           @default("user")
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
   sessions  Session[]
+  quotes    Quote[]
+  profile   BusinessProfile?
 }
 
 model Session {
@@ -27,14 +29,21 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Branding {
-  id           String   @id @default(cuid())
-  logoUrl      String?
-  companyName  String   @default("Eventos Prime Tecnología")
-  primaryColor String   @default("#1a1a2e")
-  accentColor  String   @default("#0f3460")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+model BusinessProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  companyName    String?
+  logoUrl        String?
+  phone          String?
+  email          String?
+  website        String?
+  address        String?
+  taxId          String?
+  paymentMethods String?
+  conditions     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Template {
@@ -65,23 +74,28 @@ model TemplateSection {
 }
 
 model Quote {
-  id            String             @id @default(cuid())
-  token         String             @unique
-  templateId    String
-  companyName   String
-  contactName   String?
-  email         String?
-  phone         String?
-  projectName   String?
-  internalNotes String?
-  projectPrice  Float?
-  currency      String             @default("USD")
-  status        String             @default("draft")
-  validUntil    DateTime?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  template      Template           @relation(fields: [templateId], references: [id])
-  sections      QuoteSectionItem[]
+  id             String             @id @default(cuid())
+  token          String             @unique
+  templateId     String
+  userId         String
+  companyName    String
+  contactName    String?
+  email          String?
+  phone          String?
+  projectName    String?
+  internalNotes  String?
+  projectPrice   Float?
+  currency       String             @default("USD")
+  status         String             @default("draft")
+  logoUrl        String?
+  validUntil     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  template       Template           @relation(fields: [templateId], references: [id])
+  user           User               @relation(fields: [userId], references: [id])
+  sections       QuoteSectionItem[]
+  customSections CustomSection[]
+  images         QuoteImage[]
 }
 
 model QuoteSectionItem {
@@ -96,4 +110,35 @@ model QuoteSectionItem {
   updatedAt         DateTime        @updatedAt
   templateSection   TemplateSection @relation(fields: [templateSectionId], references: [id])
   quote             Quote           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+model CustomSection {
+  id       String  @id @default(cuid())
+  quoteId  String
+  title    String
+  content  String?
+  imageUrl String?
+  order    Int     @default(0)
+  quote    Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+model QuoteImage {
+  id        String    @id @default(cuid())
+  quoteId   String
+  url       String
+  filename  String
+  size      Int
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+  quote     Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+model Branding {
+  id           String   @id @default(cuid())
+  logoUrl      String?
+  companyName  String   @default("Eventos Prime Tecnología")
+  primaryColor String   @default("#1a1a2e")
+  accentColor  String   @default("#0f3460")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

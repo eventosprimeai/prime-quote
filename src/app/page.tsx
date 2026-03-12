@@ -41,12 +41,12 @@ export default function HomePage() {
 
             {/* Desktop Nav */}
             <div className="hidden md:flex items-center gap-3">
-              <Link href="/admin">
+              <Link href="/auth/login">
                 <button className="btn-neon-ghost px-4 py-2 text-sm">
                   Iniciar Sesión
                 </button>
               </Link>
-              <Link href="/admin">
+              <Link href="/auth/register">
                 <button className="btn-neon-filled px-5 py-2.5 text-sm flex items-center gap-2">
                   Comenzar
                   <ArrowRight className="w-4 h-4" />
@@ -71,12 +71,12 @@ export default function HomePage() {
               className="md:hidden py-4 border-t border-border"
             >
               <div className="flex flex-col gap-3">
-                <Link href="/admin">
+                <Link href="/auth/login">
                   <button className="btn-neon-ghost w-full py-3">
                     Iniciar Sesión
                   </button>
                 </Link>
-                <Link href="/admin">
+                <Link href="/auth/register">
                   <button className="btn-neon-filled w-full py-3 flex items-center justify-center gap-2">
                     Comenzar
                     <ArrowRight className="w-4 h-4" />
@@ -134,15 +134,15 @@ export default function HomePage() {
               transition={{ delay: 0.25 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-4"
             >
-              <Link href="/admin" className="w-full sm:w-auto">
+              <Link href="/auth/register" className="w-full sm:w-auto">
                 <button className="btn-neon-filled w-full sm:w-auto px-8 py-4 text-lg flex items-center justify-center gap-2">
                   Crear Cotización
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </Link>
-              <Link href="/admin" className="w-full sm:w-auto">
+              <Link href="/auth/login" className="w-full sm:w-auto">
                 <button className="btn-neon w-full sm:w-auto px-8 py-4 text-lg">
-                  Ver Demo
+                  Iniciar Sesión
                 </button>
               </Link>
             </motion.div>
@@ -250,9 +250,9 @@ export default function HomePage() {
                   Únete a profesionales que ya usan Prime Quote para crear propuestas que convierten.
                 </p>
 
-                <Link href="/admin">
+                <Link href="/auth/register">
                   <button className="btn-neon-accent px-10 py-4 text-lg flex items-center gap-2 mx-auto">
-                    Acceder al Sistema
+                    Crear Cuenta Gratis
                     <ArrowRight className="w-5 h-5" />
                   </button>
                 </Link>

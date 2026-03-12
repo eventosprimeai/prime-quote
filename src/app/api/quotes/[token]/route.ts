@@ -12,12 +12,21 @@ export async function GET(
       where: { token },
       include: {
         template: true,
+        user: {
+          include: {
+            profile: true,
+          },
+        },
         sections: {
           include: {
             templateSection: true
           },
           orderBy: { order: 'asc' }
-        }
+        },
+        customSections: {
+          orderBy: { order: 'asc' }
+        },
+        images: true,
       }
     });
 

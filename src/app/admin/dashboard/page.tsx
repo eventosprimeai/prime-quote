@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FileText,
   Plus,
@@ -14,7 +15,9 @@ import {
   ChevronRight,
   TrendingUp,
   CheckCircle2,
-  Clock
+  Clock,
+  UserCircle,
+  LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +34,7 @@ interface Quote {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -44,6 +48,11 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchQuotes();
   }, []);
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/');
+  };
 
   const fetchQuotes = async () => {
     try {
@@ -116,12 +125,18 @@ export default function DashboardPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14 sm:h-16">
             {/* Logo */}
-            <Link href="/admin/dashboard">
+            <Link href="/">
               <Logo size="sm" />
             </Link>
 
             {/* Desktop Nav */}
             <div className="hidden md:flex items-center gap-2">
+              <Link href="/admin/perfil">
+                <Button variant="ghost" size="sm">
+                  <UserCircle className="w-4 h-4 mr-1.5" />
+                  Perfil
+                </Button>
+              </Link>
               <Link href="/admin/historial">
                 <Button variant="ghost" size="sm">
                   <History className="w-4 h-4 mr-1.5" />
@@ -134,6 +149,10 @@ export default function DashboardPage() {
                   Nueva
                 </Button>
               </Link>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-1.5" />
+                Salir
+              </Button>
             </div>
 
             {/* Mobile Menu Button */}
@@ -155,6 +174,12 @@ export default function DashboardPage() {
                 className="md:hidden overflow-hidden"
               >
                 <div className="py-3 space-y-2 border-t border-border/50">
+                  <Link href="/admin/perfil" className="block">
+                    <Button variant="ghost" className="w-full justify-start">
+                      <UserCircle className="w-4 h-4 mr-2" />
+                      Perfil
+                    </Button>
+                  </Link>
                   <Link href="/admin/historial" className="block">
                     <Button variant="ghost" className="w-full justify-start">
                       <History className="w-4 h-4 mr-2" />
@@ -167,6 +192,10 @@ export default function DashboardPage() {
                       Nueva Cotización
                     </Button>
                   </Link>
+                  <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Cerrar sesión
+                  </Button>
                 </div>
               </motion.div>
             )}
