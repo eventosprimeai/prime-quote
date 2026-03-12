@@ -1,0 +1,827 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ========================================
+   PRIME QUOTE - NEÓN FUTURISTA CYBERPUNK
+   Vibrant Neon on Dark Background
+======================================== */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ========================================
+   NEON COLOR PALETTE
+======================================== */
+:root {
+  --radius: 0.875rem;
+  
+  /* Deep Dark Background */
+  --background: oklch(0.08 0.01 270);
+  --foreground: oklch(0.95 0.02 270);
+  
+  /* Cards - Slightly elevated */
+  --card: oklch(0.11 0.012 270);
+  --card-foreground: oklch(0.95 0.02 270);
+  --popover: oklch(0.11 0.012 270);
+  --popover-foreground: oklch(0.95 0.02 270);
+  
+  /* Primary - Cyan Neon */
+  --primary: oklch(0.75 0.18 195);
+  --primary-foreground: oklch(0.08 0.01 270);
+  
+  /* Secondary - Subtle dark */
+  --secondary: oklch(0.16 0.015 270);
+  --secondary-foreground: oklch(0.9 0.02 270);
+  
+  /* Muted */
+  --muted: oklch(0.14 0.012 270);
+  --muted-foreground: oklch(0.55 0.02 270);
+  
+  /* Accent - Magenta/Pink Neon */
+  --accent: oklch(0.7 0.25 330);
+  --accent-foreground: oklch(0.95 0.02 270);
+  
+  /* Additional Neon Colors */
+  --neon-cyan: oklch(0.75 0.18 195);
+  --neon-magenta: oklch(0.7 0.25 330);
+  --neon-purple: oklch(0.65 0.25 300);
+  --neon-green: oklch(0.75 0.2 145);
+  --neon-orange: oklch(0.75 0.2 60);
+  
+  /* Semantic */
+  --destructive: oklch(0.65 0.25 25);
+  --success: oklch(0.7 0.2 145);
+  --warning: oklch(0.75 0.2 60);
+  
+  /* Borders */
+  --border: oklch(0.2 0.015 270);
+  --input: oklch(0.16 0.015 270);
+  --ring: oklch(0.75 0.18 195);
+  
+  /* Charts */
+  --chart-1: oklch(0.75 0.18 195);
+  --chart-2: oklch(0.7 0.25 330);
+  --chart-3: oklch(0.65 0.25 300);
+  --chart-4: oklch(0.75 0.2 60);
+  --chart-5: oklch(0.75 0.2 145);
+  
+  /* Sidebar */
+  --sidebar: oklch(0.09 0.01 270);
+  --sidebar-foreground: oklch(0.95 0.02 270);
+  --sidebar-primary: oklch(0.75 0.18 195);
+  --sidebar-primary-foreground: oklch(0.08 0.01 270);
+  --sidebar-accent: oklch(0.16 0.015 270);
+  --sidebar-accent-foreground: oklch(0.9 0.02 270);
+  --sidebar-border: oklch(0.18 0.015 270);
+  --sidebar-ring: oklch(0.75 0.18 195);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+}
+
+/* ========================================
+   NEON ANIMATIONS
+======================================== */
+@keyframes neon-pulse {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.85;
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes neon-glow {
+  0%, 100% {
+    box-shadow: 
+      0 0 5px var(--glow-color, oklch(0.75 0.18 195 / 50%)),
+      0 0 10px var(--glow-color, oklch(0.75 0.18 195 / 30%)),
+      0 0 20px var(--glow-color, oklch(0.75 0.18 195 / 20%));
+  }
+  50% {
+    box-shadow: 
+      0 0 10px var(--glow-color, oklch(0.75 0.18 195 / 60%)),
+      0 0 20px var(--glow-color, oklch(0.75 0.18 195 / 40%)),
+      0 0 40px var(--glow-color, oklch(0.75 0.18 195 / 25%)),
+      0 0 60px var(--glow-color, oklch(0.75 0.18 195 / 15%));
+  }
+}
+
+@keyframes border-glow {
+  0%, 100% {
+    border-color: oklch(0.75 0.18 195 / 60%);
+  }
+  50% {
+    border-color: oklch(0.75 0.18 195 / 100%);
+  }
+}
+
+@keyframes text-glow-pulse {
+  0%, 100% {
+    text-shadow: 
+      0 0 10px currentColor / 50%,
+      0 0 20px currentColor / 30%;
+  }
+  50% {
+    text-shadow: 
+      0 0 15px currentColor / 70%,
+      0 0 30px currentColor / 40%,
+      0 0 45px currentColor / 20%;
+  }
+}
+
+@keyframes scan-line {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+/* ========================================
+   NEON LOGO
+======================================== */
+.logo-neon {
+  position: relative;
+  background: oklch(0.12 0.02 270);
+  border: 2px solid oklch(0.75 0.18 195);
+  border-radius: 0.75rem;
+  animation: neon-glow 3s ease-in-out infinite;
+  --glow-color: oklch(0.75 0.18 195 / 40%);
+}
+
+.logo-neon::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    oklch(0.75 0.18 195 / 30%) 0%,
+    transparent 50%,
+    oklch(0.7 0.25 330 / 20%) 100%
+  );
+  pointer-events: none;
+}
+
+.logo-icon-neon {
+  position: relative;
+  z-index: 1;
+  color: oklch(0.75 0.18 195);
+  filter: drop-shadow(0 0 8px oklch(0.75 0.18 195 / 80%));
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+
+/* ========================================
+   NEON BUTTONS
+======================================== */
+.btn-neon {
+  position: relative;
+  background: transparent;
+  color: oklch(0.75 0.18 195);
+  font-weight: 600;
+  border: 2px solid oklch(0.75 0.18 195);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: neon-glow 3s ease-in-out infinite;
+  --glow-color: oklch(0.75 0.18 195 / 30%);
+}
+
+.btn-neon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    oklch(0.75 0.18 195 / 15%) 0%,
+    transparent 100%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn-neon:hover {
+  background: oklch(0.75 0.18 195 / 10%);
+  box-shadow: 
+    0 0 15px oklch(0.75 0.18 195 / 50%),
+    0 0 30px oklch(0.75 0.18 195 / 30%),
+    inset 0 0 20px oklch(0.75 0.18 195 / 10%);
+  animation: none;
+}
+
+.btn-neon:hover::before {
+  opacity: 1;
+}
+
+.btn-neon:active {
+  transform: scale(0.98);
+}
+
+/* Filled Neon Button */
+.btn-neon-filled {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    oklch(0.75 0.18 195) 0%,
+    oklch(0.65 0.2 190) 100%
+  );
+  color: oklch(0.08 0.01 270);
+  font-weight: 700;
+  border: none;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 0 15px oklch(0.75 0.18 195 / 40%),
+    0 0 30px oklch(0.75 0.18 195 / 20%);
+}
+
+.btn-neon-filled::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    oklch(1 0 0 / 30%) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+}
+
+.btn-neon-filled::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid oklch(1 0 0 / 20%);
+  pointer-events: none;
+}
+
+.btn-neon-filled:hover {
+  box-shadow: 
+    0 0 25px oklch(0.75 0.18 195 / 60%),
+    0 0 50px oklch(0.75 0.18 195 / 30%),
+    0 0 75px oklch(0.75 0.18 195 / 15%);
+  transform: translateY(-2px);
+}
+
+/* Magenta Accent Button */
+.btn-neon-accent {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    oklch(0.7 0.25 330) 0%,
+    oklch(0.6 0.25 325) 100%
+  );
+  color: white;
+  font-weight: 700;
+  border: none;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 0 15px oklch(0.7 0.25 330 / 40%),
+    0 0 30px oklch(0.7 0.25 330 / 20%);
+}
+
+.btn-neon-accent::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    oklch(1 0 0 / 25%) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+}
+
+.btn-neon-accent:hover {
+  box-shadow: 
+    0 0 25px oklch(0.7 0.25 330 / 60%),
+    0 0 50px oklch(0.7 0.25 330 / 30%);
+  transform: translateY(-2px);
+}
+
+/* Ghost Button */
+.btn-neon-ghost {
+  position: relative;
+  background: transparent;
+  color: oklch(0.7 0.25 330);
+  font-weight: 500;
+  border: 1px solid oklch(0.7 0.25 330 / 40%);
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-neon-ghost:hover {
+  background: oklch(0.7 0.25 330 / 10%);
+  border-color: oklch(0.7 0.25 330 / 80%);
+  box-shadow: 0 0 15px oklch(0.7 0.25 330 / 25%);
+}
+
+/* ========================================
+   NEON CARDS
+======================================== */
+.card-neon {
+  position: relative;
+  background: oklch(0.1 0.012 270);
+  border: 1px solid oklch(0.75 0.18 195 / 20%);
+  border-radius: 1rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.card-neon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    oklch(0.75 0.18 195 / 5%) 0%,
+    transparent 50%,
+    oklch(0.7 0.25 330 / 3%) 100%
+  );
+  pointer-events: none;
+}
+
+.card-neon:hover {
+  border-color: oklch(0.75 0.18 195 / 50%);
+  box-shadow: 
+    0 0 20px oklch(0.75 0.18 195 / 15%),
+    inset 0 0 30px oklch(0.75 0.18 195 / 5%);
+  transform: translateY(-2px);
+}
+
+/* Card with Cyan Border */
+.card-neon-cyan {
+  border-color: oklch(0.75 0.18 195 / 30%);
+}
+
+.card-neon-cyan:hover {
+  border-color: oklch(0.75 0.18 195);
+}
+
+/* Card with Magenta Border */
+.card-neon-magenta {
+  border-color: oklch(0.7 0.25 330 / 30%);
+}
+
+.card-neon-magenta:hover {
+  border-color: oklch(0.7 0.25 330);
+}
+
+/* ========================================
+   NEON INPUTS
+======================================== */
+.input-neon {
+  background: oklch(0.1 0.012 270);
+  border: 1px solid oklch(0.3 0.015 270);
+  border-radius: 0.5rem;
+  color: oklch(0.95 0.02 270);
+  transition: all 0.2s ease;
+}
+
+.input-neon:focus {
+  outline: none;
+  border-color: oklch(0.75 0.18 195);
+  box-shadow: 
+    0 0 0 3px oklch(0.75 0.18 195 / 15%),
+    0 0 20px oklch(0.75 0.18 195 / 10%);
+}
+
+.input-neon::placeholder {
+  color: oklch(0.45 0.02 270);
+}
+
+/* ========================================
+   NEON TEXT
+======================================== */
+.text-neon-cyan {
+  color: oklch(0.75 0.18 195);
+  text-shadow: 0 0 15px oklch(0.75 0.18 195 / 40%);
+}
+
+.text-neon-magenta {
+  color: oklch(0.7 0.25 330);
+  text-shadow: 0 0 15px oklch(0.7 0.25 330 / 40%);
+}
+
+.text-neon-purple {
+  color: oklch(0.65 0.25 300);
+  text-shadow: 0 0 15px oklch(0.65 0.25 300 / 40%);
+}
+
+.text-neon-gradient {
+  background: linear-gradient(
+    135deg,
+    oklch(0.75 0.18 195) 0%,
+    oklch(0.7 0.25 330) 50%,
+    oklch(0.75 0.18 195) 100%
+  );
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 5s ease infinite;
+}
+
+/* ========================================
+   NEON LOGO
+======================================== */
+.logo-neon {
+  background: oklch(0.12 0.02 270);
+  border: 1.5px solid oklch(0.75 0.18 195 / 60%);
+  box-shadow: 
+    0 0 15px oklch(0.75 0.18 195 / 25%),
+    inset 0 0 15px oklch(0.75 0.18 195 / 8%);
+  transition: all 0.3s ease;
+}
+
+.logo-neon:hover {
+  box-shadow: 
+    0 0 25px oklch(0.75 0.18 195 / 40%),
+    0 0 50px oklch(0.75 0.18 195 / 20%),
+    inset 0 0 20px oklch(0.75 0.18 195 / 12%);
+}
+
+.logo-icon-neon {
+  color: oklch(0.75 0.18 195);
+  filter: drop-shadow(0 0 8px oklch(0.75 0.18 195 / 70%));
+}
+
+/* ========================================
+   NEON BUTTONS
+======================================== */
+.badge-neon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.badge-draft {
+  background: oklch(0.2 0.015 270);
+  color: oklch(0.55 0.02 270);
+  border: 1px solid oklch(0.3 0.015 270);
+}
+
+.badge-sent {
+  background: oklch(0.75 0.18 195 / 15%);
+  color: oklch(0.75 0.18 195);
+  border: 1px solid oklch(0.75 0.18 195 / 40%);
+  box-shadow: 0 0 10px oklch(0.75 0.18 195 / 20%);
+}
+
+.badge-viewed {
+  background: oklch(0.65 0.25 300 / 15%);
+  color: oklch(0.7 0.22 300);
+  border: 1px solid oklch(0.65 0.25 300 / 40%);
+  box-shadow: 0 0 10px oklch(0.65 0.25 300 / 20%);
+}
+
+.badge-accepted {
+  background: oklch(0.75 0.2 145 / 15%);
+  color: oklch(0.75 0.2 145);
+  border: 1px solid oklch(0.75 0.2 145 / 40%);
+  box-shadow: 0 0 10px oklch(0.75 0.2 145 / 20%);
+}
+
+.badge-rejected {
+  background: oklch(0.65 0.25 25 / 15%);
+  color: oklch(0.7 0.22 25);
+  border: 1px solid oklch(0.65 0.25 25 / 40%);
+}
+
+/* ========================================
+   NEON BACKGROUND EFFECTS
+======================================== */
+.bg-grid {
+  background-image: 
+    linear-gradient(oklch(0.75 0.18 195 / 3%) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.75 0.18 195 / 3%) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+.bg-glow {
+  position: relative;
+}
+
+.bg-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 60% 40% at 20% 30%, oklch(0.75 0.18 195 / 8%) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 80% 20%, oklch(0.7 0.25 330 / 6%) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 60% 80%, oklch(0.65 0.25 300 / 5%) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* Scan line effect */
+.scanline::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.75 0.18 195 / 30%),
+    oklch(0.7 0.25 330 / 30%),
+    transparent
+  );
+  animation: scan-line 8s linear infinite;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ========================================
+   NEON DIVIDERS
+======================================== */
+.divider-neon {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.75 0.18 195 / 50%),
+    oklch(0.7 0.25 330 / 50%),
+    transparent
+  );
+}
+
+/* ========================================
+   GLASS EFFECTS (Dark)
+======================================== */
+.glass-dark {
+  background: oklch(0.1 0.01 270 / 80%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ========================================
+   SCROLLBAR
+======================================== */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: oklch(0.1 0.01 270); }
+::-webkit-scrollbar-thumb { 
+  background: linear-gradient(180deg, oklch(0.75 0.18 195), oklch(0.7 0.25 330));
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { 
+  background: linear-gradient(180deg, oklch(0.8 0.18 195), oklch(0.75 0.25 330));
+}
+
+/* ========================================
+   SELECTION
+======================================== */
+::selection {
+  background: oklch(0.75 0.18 195 / 30%);
+  color: white;
+}
+
+/* ========================================
+   FOCUS RING
+======================================== */
+:focus-visible {
+  outline: 2px solid oklch(0.75 0.18 195);
+  outline-offset: 2px;
+  box-shadow: 0 0 15px oklch(0.75 0.18 195 / 30%);
+}
+
+/* ========================================
+   MISC
+======================================== */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* ========================================
+   NEON CARDS (class for landing)
+======================================== */
+.card-neon {
+  position: relative;
+  background: oklch(0.1 0.012 270);
+  border: 1px solid oklch(0.75 0.18 195 / 20%);
+  border-radius: 1rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.card-neon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    oklch(0.75 0.18 195 / 5%) 0%,
+    transparent 50%,
+    oklch(0.7 0.25 330 / 3%) 100%
+  );
+  pointer-events: none;
+}
+
+.card-neon:hover {
+  border-color: oklch(0.75 0.18 195 / 50%);
+  box-shadow: 
+    0 0 20px oklch(0.75 0.18 195 / 15%),
+    inset 0 0 30px oklch(0.75 0.18 195 / 5%);
+  transform: translateY(-2px);
+}
+
+/* Card with Cyan Border */
+.card-neon-cyan {
+  border-color: oklch(0.75 0.18 195 / 30%);
+}
+
+.card-neon-cyan:hover {
+  border-color: oklch(0.75 0.18 195);
+}
+
+/* Card with Magenta Border */
+.card-neon-magenta {
+  border-color: oklch(0.7 0.25 330 / 30%);
+}
+
+.card-neon-magenta:hover {
+  border-color: oklch(0.7 0.25 330);
+  --glow-color: oklch(0.7 0.25 330 / 40%);
+}
+
+/* Simple neon button */
+.btn-neon {
+  position: relative;
+  background: transparent;
+  color: oklch(0.75 0.18 195);
+  font-weight: 500;
+  border: 1px solid oklch(0.75 0.18 195 / 50%);
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-neon:hover {
+  background: oklch(0.75 0.18 195 / 10%);
+  border-color: oklch(0.75 0.18 195);
+  box-shadow: 0 0 20px oklch(0.75 0.18 195 / 20%);
+}
+
+/* ========================================
+   NEON INPUT
+======================================== */
+.input-neon {
+  background: oklch(0.08 0.01 270);
+  border: 1px solid oklch(0.75 0.18 195 / 25%);
+  border-radius: 0.5rem;
+  color: oklch(0.95 0.02 270);
+  font-size: 0.9375rem;
+  transition: all 0.2s ease;
+}
+
+.input-neon:focus {
+  outline: none;
+  border-color: oklch(0.75 0.18 195);
+  box-shadow: 
+    0 0 0 3px oklch(0.75 0.18 195 / 10%),
+    0 0 20px oklch(0.75 0.18 195 / 10%);
+}
+
+.input-neon::placeholder {
+  color: oklch(0.4 0.02 270);
+}
+
+/* ========================================
+   NEON CARD LOGIN
+======================================== */
+.card-neon {
+  position: relative;
+  background: oklch(0.1 0.012 270);
+  border: 1px solid oklch(0.75 0.18 195 / 20%);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.card-neon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    oklch(0.75 0.18 195 / 5%) 0%,
+    transparent 50%,
+    oklch(0.7 0.25 330 / 3%) 100%
+  );
+  pointer-events: none;
+}
+
+/* Corner accents */
+.card-neon::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.75 0.18 195 / 60%),
+    oklch(0.7 0.25 330 / 40%),
+    transparent
+  );
+}
+
+/* ========================================
+   SCANLINE EFFECT
+======================================== */
+.scanline::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.75 0.18 195 / 20%),
+    oklch(0.7 0.25 330 / 20%),
+    transparent
+  );
+  animation: scan-line 10s linear infinite;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-100vh); }
+  100% { transform: translateY(100vh); }
+}
+
+@media print {
+  .no-print { display: none !important; }
+}

@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Usuario administrador del sistema
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions  Session[]
+}
+
+// Sesiones de usuario
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// Configuración de branding (logo, colores, etc.)
+model Branding {
+  id        String   @id @default(cuid())
+  logoUrl   String?
+  companyName String @default("Eventos Prime Tecnología")
+  primaryColor String @default("#1a1a2e")
+  accentColor String @default("#0f3460")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Plantillas de cotización
+model Template {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  sections    TemplateSection[]
+  quotes      Quote[]
+}
+
+// Secciones de plantillas
+model TemplateSection {
+  id           String   @id @default(cuid())
+  templateId   String
+  template     Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  key          String   // identificador único de la sección
+  title        String
+  icon         String?  // nombre del icono
+  order        Int      @default(0)
+  isRequired   Boolean  @default(false)
+  isDefault    Boolean  @default(true) // si está seleccionada por defecto
+  content      String?  // contenido por defecto en JSON
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  sectionItems QuoteSectionItem[]
+}
+
+// Cotizaciones generadas
+model Quote {
+  id              String   @id @default(cuid())
+  token           String   @unique // token único para compartir
+  templateId      String
+  template        Template @relation(fields: [templateId], references: [id])
+  
+  // Datos del cliente
+  companyName     String
+  contactName     String?
+  email           String?
+  phone           String?
+  projectName     String?
+  internalNotes   String?
+  
+  // Información del proyecto
+  projectPrice    Float?
+  currency        String   @default("USD")
+  
+  // Estado
+  status          String   @default("draft") // draft, sent, viewed, accepted, rejected
+  
+  // Fechas
+  validUntil      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  sections        QuoteSectionItem[]
+}
+
+// Items de secciones en cotizaciones (con contenido personalizado)
+model QuoteSectionItem {
+  id            String   @id @default(cuid())
+  quoteId       String
+  quote         Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  templateSectionId String
+  templateSection TemplateSection @relation(fields: [templateSectionId], references: [id])
+  title         String
+  content       String?  // JSON con el contenido personalizado
+  order         Int      @default(0)
+  isVisible     Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
