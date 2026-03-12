@@ -12,11 +12,23 @@ import {
   Menu,
   X
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Logo, LogoMinimal } from "@/components/ui/logo";
 
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.user) {
+          setUser(data.user);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const features = [
     { icon: FileText, title: "Cotizaciones Premium", description: "Propuestas elegantes que impresionan" },
@@ -41,17 +53,28 @@ export default function HomePage() {
 
             {/* Desktop Nav */}
             <div className="hidden md:flex items-center gap-3">
-              <Link href="/auth/login">
-                <button className="btn-neon-ghost px-4 py-2 text-sm">
-                  Iniciar Sesión
-                </button>
-              </Link>
-              <Link href="/auth/register">
-                <button className="btn-neon-filled px-5 py-2.5 text-sm flex items-center gap-2">
-                  Comenzar
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </Link>
+              {user ? (
+                <Link href="/admin/dashboard">
+                  <button className="btn-neon-filled px-5 py-2.5 text-sm flex items-center gap-2">
+                    Ir al Dashboard
+                    <ArrowRight className="w-4 h-4 ml-1" />
+                  </button>
+                </Link>
+              ) : (
+                <>
+                  <Link href="/auth/login">
+                    <button className="btn-neon-ghost px-4 py-2 text-sm">
+                      Iniciar Sesión
+                    </button>
+                  </Link>
+                  <Link href="/auth/register">
+                    <button className="btn-neon-filled px-5 py-2.5 text-sm flex items-center gap-2">
+                      Comenzar
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -70,19 +93,28 @@ export default function HomePage() {
               animate={{ opacity: 1, height: "auto" }}
               className="md:hidden py-4 border-t border-border"
             >
-              <div className="flex flex-col gap-3">
-                <Link href="/auth/login">
-                  <button className="btn-neon-ghost w-full py-3">
-                    Iniciar Sesión
-                  </button>
-                </Link>
-                <Link href="/auth/register">
-                  <button className="btn-neon-filled w-full py-3 flex items-center justify-center gap-2">
-                    Comenzar
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </Link>
-              </div>
+                {user ? (
+                  <Link href="/admin/dashboard">
+                    <button className="btn-neon-filled w-full py-3 flex items-center justify-center gap-2">
+                      Ir al Dashboard
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </Link>
+                ) : (
+                  <>
+                    <Link href="/auth/login">
+                      <button className="btn-neon-ghost w-full py-3">
+                        Iniciar Sesión
+                      </button>
+                    </Link>
+                    <Link href="/auth/register">
+                      <button className="btn-neon-filled w-full py-3 flex items-center justify-center gap-2">
+                        Comenzar
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </Link>
+                  </>
+                )}
             </motion.div>
           )}
         </div>
