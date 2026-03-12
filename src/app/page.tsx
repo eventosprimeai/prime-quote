@@ -250,6 +250,118 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section className="py-16 sm:py-24 px-4 sm:px-6 bg-gradient-to-b from-background to-muted/10 border-t border-border/30">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-14"
+          >
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Planes a tu <span className="text-neon-gradient">medida</span>
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+              Escala tu negocio de servicios con herramientas de impacto. Todo es 100% funcional.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+            {/* Free */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0 }}
+              className="card-neon flex flex-col p-6 sm:p-8"
+            >
+              <h3 className="text-xl font-bold mb-2">Pase Libre</h3>
+              <p className="text-4xl font-extrabold mb-4">$0 <span className="text-sm font-normal text-muted-foreground">/ mes</span></p>
+              <p className="text-muted-foreground text-sm mb-6 flex-grow">El anzuelo perfecto para probar la calidad de envío y recepción.</p>
+              <ul className="space-y-3 mb-8 text-sm">
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-neon-cyan" /> 10 Cotizaciones</li>
+                <li className="flex items-center gap-2 text-muted-foreground"><X className="w-4 h-4" /> Sin logo propio</li>
+                <li className="flex items-center gap-2 text-muted-foreground"><X className="w-4 h-4" /> Tema oscuro forzado</li>
+                <li className="flex items-center gap-2 text-muted-foreground"><X className="w-4 h-4" /> Marca de agua Prime Quote</li>
+              </ul>
+              <Link href="/auth/register" className="w-full mt-auto">
+                <button className="btn-neon w-full py-3 text-sm">Comenzar Gratis</button>
+              </Link>
+            </motion.div>
+
+            {/* Pro */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="card-neon flex flex-col p-6 sm:p-8 relative border-neon-magenta/50 overflow-hidden"
+            >
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-neon-cyan to-neon-magenta" />
+              <div className="absolute -top-3 right-4 bg-neon-magenta text-white text-[10px] uppercase font-bold px-3 py-1 rounded-full shadow-lg shadow-neon-magenta/30">Popular</div>
+              <h3 className="text-xl font-bold mb-2">Profesional</h3>
+              <p className="text-4xl font-extrabold mb-4">$9 <span className="text-sm font-normal text-muted-foreground">/ mes</span></p>
+              <p className="text-muted-foreground text-sm mb-6 flex-grow">Para el freelance que necesita destacarse con identidad propia.</p>
+              <ul className="space-y-3 mb-8 text-sm">
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-neon-cyan" /> 100 Cotizaciones</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-neon-cyan" /> Subida de Logo Propio</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-neon-cyan" /> Exportación PDF</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-neon-cyan" /> Sin marca de agua</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-neon-cyan" /> Aprobaciones / Contratos</li>
+              </ul>
+              <a href="https://wa.me/593999999999?text=Hola,%20quiero%20el%20plan%20Pro" target="_blank" rel="noopener noreferrer" className="w-full mt-auto">
+                <button className="btn-neon-filled w-full py-3 text-sm bg-gradient-to-r from-neon-cyan to-neon-magenta text-white border-0">Actualizar a Pro</button>
+              </a>
+            </motion.div>
+
+            {/* Business */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="card-neon flex flex-col p-6 sm:p-8"
+            >
+              <h3 className="text-xl font-bold mb-2">Business</h3>
+              <p className="text-4xl font-extrabold mb-4">$29 <span className="text-sm font-normal text-muted-foreground">/ mes</span></p>
+              <p className="text-muted-foreground text-sm mb-6 flex-grow">Para PyMES y estudios establecidos con volumen constante.</p>
+              <ul className="space-y-3 mb-8 text-sm">
+                <li className="flex items-center gap-2 font-bold text-neon-magenta"><Check className="w-4 h-4 text-neon-magenta" /> Cotizaciones Ilimitadas</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-neon-cyan" /> Temas Custom</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-neon-cyan" /> Enlaces RRSS en footer</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-neon-cyan" /> Pasarela de pago</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-neon-cyan" /> Analytics Básicas</li>
+              </ul>
+              <a href="https://wa.me/593999999999?text=Hola,%20quiero%20el%20plan%20Business" target="_blank" rel="noopener noreferrer" className="w-full mt-auto">
+                <button className="btn-neon w-full py-3 text-sm hover:border-neon-magenta/50">Contactar Ventas</button>
+              </a>
+            </motion.div>
+
+            {/* Agency */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              className="card-neon flex flex-col p-6 sm:p-8 opacity-80"
+            >
+              <div className="absolute -top-3 left-4 bg-muted text-muted-foreground text-[10px] uppercase font-bold px-3 py-1 rounded-full border border-border/50">Roadmap</div>
+              <h3 className="text-xl font-bold mb-2 text-muted-foreground">Agency</h3>
+              <p className="text-4xl font-extrabold mb-4 text-muted-foreground">$59 <span className="text-sm font-normal text-muted-foreground">/ mes</span></p>
+              <p className="text-muted-foreground text-sm mb-6 flex-grow">Solución total para agencias y equipos con múltiples cerradores.</p>
+              <ul className="space-y-3 mb-8 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2"><Check className="w-4 h-4" /> Multi-usuario (Equipos)</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4" /> Dominio Propio / White Label</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4" /> API Comercial</li>
+                <li className="flex items-center gap-2"><Check className="w-4 h-4" /> Integración Webhooks</li>
+              </ul>
+              <button disabled className="btn-neon cursor-not-allowed w-full py-3 text-sm opacity-50 mt-auto">Próximamente</button>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
