@@ -125,7 +125,7 @@ export function Logo({ size = "md", showText = true, className }: LogoProps) {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
             >
-              Cotizador Premium de Servicios Profesionales
+              SERVICIOS PROFESIONALES
             </motion.span>
           )}
         </div>
