@@ -299,7 +299,7 @@ export default function HomePage() {
               className="card-neon flex flex-col p-6 sm:p-8 relative border-neon-magenta/50 overflow-hidden"
             >
               <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-neon-cyan to-neon-magenta" />
-              <div className="absolute -top-3 right-4 bg-neon-magenta text-white text-[10px] uppercase font-bold px-3 py-1 rounded-full shadow-lg shadow-neon-magenta/30">Popular</div>
+              <div className="absolute top-4 right-4 bg-neon-magenta text-white text-[10px] uppercase font-bold px-3 py-1 rounded-full shadow-lg shadow-neon-magenta/30">Popular</div>
               <h3 className="text-xl font-bold mb-2">Profesional</h3>
               <p className="text-4xl font-extrabold mb-4">$5 <span className="text-sm font-normal text-muted-foreground">/ mes</span></p>
               <p className="text-muted-foreground text-sm mb-6 flex-grow">Para el freelance que necesita destacarse con identidad propia.</p>
@@ -344,9 +344,9 @@ export default function HomePage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.3 }}
-              className="card-neon flex flex-col p-6 sm:p-8 opacity-80"
+              className="card-neon flex flex-col p-6 sm:p-8 opacity-80 relative"
             >
-              <div className="absolute -top-3 left-4 bg-muted text-muted-foreground text-[10px] uppercase font-bold px-3 py-1 rounded-full border border-border/50">Roadmap</div>
+              <div className="absolute top-4 right-4 bg-muted text-muted-foreground text-[10px] uppercase font-bold px-3 py-1 rounded-full border border-border/50">Roadmap</div>
               <h3 className="text-xl font-bold mb-2 text-muted-foreground">Agency</h3>
               <p className="text-4xl font-extrabold mb-4 text-muted-foreground">$59 <span className="text-sm font-normal text-muted-foreground">/ mes</span></p>
               <p className="text-muted-foreground text-sm mb-6 flex-grow">Solución total para agencias y equipos con múltiples cerradores.</p>
