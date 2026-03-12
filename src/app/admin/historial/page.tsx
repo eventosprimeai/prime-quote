@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -57,7 +56,6 @@ interface Quote {
 }
 
 export default function HistorialPage() {
-  const router = useRouter();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -70,10 +68,6 @@ export default function HistorialPage() {
   const fetchQuotes = async () => {
     try {
       const response = await fetch("/api/quotes");
-      if (!response.ok) {
-        router.push("/admin");
-        return;
-      }
       const data = await response.json();
       setQuotes(data);
     } catch (error) {

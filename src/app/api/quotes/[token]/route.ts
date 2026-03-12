@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getSession } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
@@ -46,11 +45,6 @@ export async function PUT(
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
     const { token } = await params;
     const body = await request.json();
 
@@ -104,11 +98,6 @@ export async function DELETE(
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
     const { token } = await params;
 
     await db.quote.delete({

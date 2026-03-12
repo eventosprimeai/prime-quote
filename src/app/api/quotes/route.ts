@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getSession } from '@/lib/auth';
 import { generateToken } from '@/lib/utils';
 
 export async function GET() {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
     const quotes = await db.quote.findMany({
       include: {
         template: true,
@@ -32,11 +26,6 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
     const body = await request.json();
     const {
       templateId,
@@ -80,7 +69,7 @@ export async function POST(request: NextRequest) {
         currency: currency || 'USD',
         status: 'draft',
         sections: {
-          create: templateSections.map((ts, index) => ({
+          create: templateSections.map((ts) => ({
             templateSectionId: ts.id,
             title: ts.title,
             content: sections?.find((s: { key: string }) => s.key === ts.key)?.content || ts.content,

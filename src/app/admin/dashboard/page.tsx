@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   FileText,
   Plus,
   History,
-  LogOut,
   ArrowRight,
   Loader2,
   Menu,
@@ -21,7 +19,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Logo } from "@/components/ui/logo";
-import { toast } from "sonner";
 
 interface Quote {
   id: string;
@@ -34,7 +31,6 @@ interface Quote {
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -51,13 +47,7 @@ export default function DashboardPage() {
 
   const fetchQuotes = async () => {
     try {
-      const response = await fetch("/api/quotes", {
-        credentials: 'include'  // Importante: incluir cookies
-      });
-      if (!response.ok) {
-        router.push("/admin");
-        return;
-      }
+      const response = await fetch("/api/quotes");
       const data = await response.json();
       setQuotes(data);
       
@@ -73,11 +63,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/admin");
-    toast.success("Sesión cerrada");
-  };
+
 
   const getStatusBadge = (status: string) => {
     const config: Record<string, { class: string; label: string }> = {
@@ -142,10 +128,12 @@ export default function DashboardPage() {
                   Historial
                 </Button>
               </Link>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-1.5" />
-                Salir
-              </Button>
+              <Link href="/admin/nueva">
+                <Button variant="default" size="sm">
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  Nueva
+                </Button>
+              </Link>
             </div>
 
             {/* Mobile Menu Button */}
@@ -173,10 +161,12 @@ export default function DashboardPage() {
                       Historial
                     </Button>
                   </Link>
-                  <Button variant="ghost" className="w-full justify-start text-destructive" onClick={handleLogout}>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Cerrar sesión
-                  </Button>
+                  <Link href="/admin/nueva" className="block">
+                    <Button variant="default" className="w-full justify-start">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Nueva Cotización
+                    </Button>
+                  </Link>
                 </div>
               </motion.div>
             )}

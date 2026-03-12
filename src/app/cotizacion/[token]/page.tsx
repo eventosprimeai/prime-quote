@@ -26,12 +26,12 @@ import * as Icons from "lucide-react";
 
 interface QuoteSection {
   id: string;
-  key: string;
   title: string;
   content: string;
   isVisible: boolean;
   order: number;
   templateSection: {
+    key: string;
     icon: string | null;
   };
 }
@@ -194,6 +194,68 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
       );
     }
 
+    if (parsed.type === "architecture") {
+      return (
+        <div className="space-y-6">
+          {parsed.intro && (
+            <p className="text-muted-foreground text-lg">{parsed.intro}</p>
+          )}
+          
+          <div className="grid gap-5">
+            {parsed.pages?.map((page: { title: string; icon?: string; sections?: string[] }, i: number) => {
+              const PageIcon = page.icon ? (Icons as Record<string, React.ComponentType<{ className?: string }>>)[page.icon] || FileText : FileText;
+              
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.08 }}
+                  className="p-5 rounded-xl bg-muted/30 border border-border/30 hover:border-primary/30 transition-all"
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0">
+                      <PageIcon className="w-5 h-5 text-white" />
+                    </div>
+                    <h4 className="font-semibold text-lg">{page.title}</h4>
+                  </div>
+                  {page.sections && (
+                    <ul className="space-y-2 ml-1">
+                      {page.sections.map((section: string, j: number) => (
+                        <li key={j} className="flex items-center gap-3 text-muted-foreground">
+                          <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-primary to-accent shrink-0" />
+                          {section}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+          
+          {parsed.footer && (
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="p-5 rounded-xl bg-muted/20 border border-border/20"
+            >
+              <h4 className="font-semibold mb-3">Footer del Sitio</h4>
+              <div className="flex flex-wrap gap-3">
+                {parsed.footer.map((item: string, i: number) => (
+                  <span key={i} className="px-3 py-1.5 rounded-full bg-muted/50 text-sm text-muted-foreground">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </div>
+      );
+    }
+
     if (parsed.type === "timeline") {
       return (
         <div className="relative pl-8 py-4">
@@ -220,6 +282,63 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
               <p className="text-muted-foreground mt-1">{item.description}</p>
             </motion.div>
           ))}
+        </div>
+      );
+    }
+
+    if (parsed.type === "payment") {
+      return (
+        <div className="space-y-6">
+          {parsed.items?.map((item: { title?: string; subtitle?: string; description?: string }, i: number) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className="flex items-start gap-4 p-5 rounded-xl bg-muted/30 border border-border/30 hover:border-primary/30 transition-all group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                <Check className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                {item.title && <h4 className="font-semibold text-lg">{item.title}</h4>}
+                {item.subtitle && <p className="text-muted-foreground mt-1">{item.subtitle}</p>}
+                {item.description && <p className="text-sm text-muted-foreground mt-2">{item.description}</p>}
+              </div>
+            </motion.div>
+          ))}
+          
+          {parsed.accounts && (
+            <div className="grid md:grid-cols-2 gap-4 mt-6">
+              {parsed.accounts.map((account: { type?: string; name?: string; bank?: string; accountType?: string; accountNumber?: string; email?: string; id?: string; ruc?: string; phone?: string }, i: number) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.2 + i * 0.1 }}
+                  className="p-5 rounded-xl bg-muted/30 border border-border/30"
+                >
+                  <p className="font-semibold mb-3 flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <span className="text-primary text-sm font-bold">{i === 0 ? 'A' : 'B'}</span>
+                    </span>
+                    {account.type}
+                  </p>
+                  <div className="space-y-1.5 text-sm text-muted-foreground">
+                    {account.name && <p><span className="font-medium text-foreground">{account.name}</span></p>}
+                    {account.bank && <p>{account.bank}{account.accountType ? ` - ${account.accountType}` : ''}</p>}
+                    {account.accountNumber && <p>Cuenta: {account.accountNumber}</p>}
+                    {account.ruc && <p>{account.ruc}</p>}
+                    {account.email && <p>{account.email}</p>}
+                    {account.phone && <p>Tel: {account.phone}</p>}
+                    {account.id && <p>{account.id}</p>}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
@@ -386,20 +505,21 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
       {/* Sections */}
       <section className="px-6 pb-20">
         <div className="max-w-5xl mx-auto">
-          <Accordion type="multiple" defaultValue={[visibleSections[0]?.key]} className="space-y-5">
+          <Accordion type="single" collapsible defaultValue={visibleSections[0]?.templateSection?.key} className="space-y-5">
             {visibleSections.map((section, index) => {
               const Icon = getIcon(section.templateSection.icon);
+              const sectionKey = section.templateSection?.key || `section-${index}`;
               
               return (
                 <motion.div
-                  key={section.key}
+                  key={sectionKey}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-50px" }}
                   transition={{ delay: index * 0.08 }}
                 >
                   <AccordionItem 
-                    value={section.key}
+                    value={sectionKey}
                     className="border border-border/30 rounded-2xl bg-card/50 backdrop-blur-sm overflow-hidden data-[state=open]:bg-card/80 data-[state=open]:border-primary/30 data-[state=open]:shadow-lg data-[state=open]:shadow-primary/5 transition-all"
                   >
                     <AccordionTrigger className="px-7 py-6 hover:no-underline hover:bg-muted/30 transition-colors group">
@@ -422,7 +542,7 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
         </div>
       </section>
 
-      {/* Payment Info */}
+      {/* Payment Info - Dynamic from quote */}
       <section className="px-6 pb-20">
         <div className="max-w-5xl mx-auto">
           <motion.div
@@ -503,7 +623,7 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
                       Sin IVA ni factura
                     </p>
                     <div className="space-y-2 text-sm text-muted-foreground">
-                      <p><span className="font-medium text-foreground">Karen Michelle Vargas Sánchez</span></p>
+                      <p><span className="font-medium text-foreground">Vargas Sanchez Karen Michelle</span></p>
                       <p>Banco Guayaquil - Ahorro #0045784627</p>
                       <p>KARENCOMPARTE@GMAIL.COM</p>
                       <p>CI: 0922488481</p>
