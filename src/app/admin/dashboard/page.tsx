@@ -17,7 +17,8 @@ import {
   CheckCircle2,
   Clock,
   UserCircle,
-  LogOut
+  LogOut,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,6 +45,11 @@ export default function DashboardPage() {
     sent: 0,
     accepted: 0
   });
+  const [usage, setUsage] = useState({
+    plan: "FREE",
+    count: 0,
+    limit: 10
+  });
 
   useEffect(() => {
     fetchQuotes();
@@ -58,12 +64,16 @@ export default function DashboardPage() {
     try {
       const response = await fetch("/api/quotes");
       const data = await response.json();
-      setQuotes(data);
+      setQuotes(data.quotes || []);
+      if (data.usage) {
+        setUsage(data.usage);
+      }
       
-      const total = data.length;
-      const draft = data.filter((q: Quote) => q.status === "draft").length;
-      const sent = data.filter((q: Quote) => q.status === "sent" || q.status === "viewed").length;
-      const accepted = data.filter((q: Quote) => q.status === "accepted").length;
+      const quotesList = data.quotes || [];
+      const total = quotesList.length;
+      const draft = quotesList.filter((q: Quote) => q.status === "draft").length;
+      const sent = quotesList.filter((q: Quote) => q.status === "sent" || q.status === "viewed").length;
+      const accepted = quotesList.filter((q: Quote) => q.status === "accepted").length;
       setStats({ total, draft, sent, accepted });
     } catch (error) {
       console.error(error);
@@ -216,6 +226,48 @@ export default function DashboardPage() {
             Gestiona tus cotizaciones desde aquí
           </p>
         </motion.div>
+
+        {/* Usage Limits (if FREE) */}
+        {usage.plan === "FREE" && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 sm:mb-8"
+          >
+            <Card className="card-elevated border-neon-cyan/20 bg-gradient-to-r from-neon-cyan/5 to-transparent relative overflow-hidden">
+              <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex-1 w-full relative z-10">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-neon-cyan" />
+                      Plan Gratuito
+                    </h3>
+                    <span className="text-sm font-medium">{usage.count} / {usage.limit} usadas</span>
+                  </div>
+                  <div className="h-2 bg-muted/50 rounded-full overflow-hidden">
+                    <motion.div 
+                      className={`h-full rounded-full ${usage.count >= usage.limit ? "bg-red-500" : "bg-neon-cyan"}`}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min((usage.count / usage.limit) * 100, 100)}%` }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                    />
+                  </div>
+                  {usage.count >= usage.limit && (
+                    <p className="text-xs text-red-400 mt-2 font-medium">Has alcanzado el límite gratuito.</p>
+                  )}
+                </div>
+                <Button 
+                  className="btn-primary whitespace-nowrap relative z-10 w-full sm:w-auto"
+                  onClick={() => window.open('https://wa.me/593999999999?text=Hola,%20quiero%20actualizar%20mi%20cuenta%20de%20Prime%20Quote%20a%20PRO', '_blank')}
+                >
+                  Actualizar a PRO ($5/mes)
+                </Button>
+                {/* Background glow decoration */}
+                <div className="absolute right-0 top-0 w-32 h-32 bg-neon-cyan/10 blur-3xl pointer-events-none rounded-full translate-x-1/2 -translate-y-1/2" />
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mb-6 sm:mb-8">

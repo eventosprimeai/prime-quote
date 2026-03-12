@@ -8,16 +8,18 @@ datasource db {
 }
 
 model User {
-  id        String           @id @default(cuid())
-  email     String           @unique
-  password  String
-  name      String
-  role      String           @default("user")
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  sessions  Session[]
-  quotes    Quote[]
-  profile   BusinessProfile?
+  id                 String           @id @default(cuid())
+  email              String           @unique
+  password           String
+  name               String
+  role               String           @default("user")
+  plan               String           @default("FREE")
+  quotesCreatedCount Int              @default(0)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  sessions           Session[]
+  quotes             Quote[]
+  profile            BusinessProfile?
 }
 
 model Session {
@@ -96,6 +98,9 @@ model Quote {
   sections       QuoteSectionItem[]
   customSections CustomSection[]
   images         QuoteImage[]
+  messages       QuoteMessage[]
+  contract       Contract?
+  payments       Payment[]
 }
 
 model QuoteSectionItem {
@@ -141,4 +146,38 @@ model Branding {
   accentColor  String   @default("#0f3460")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model QuoteMessage {
+  id        String   @id @default(cuid())
+  quoteId   String
+  sender    String   // "ADMIN" or "CLIENT"
+  text      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  quote     Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+model Contract {
+  id          String    @id @default(cuid())
+  quoteId     String    @unique
+  content     String
+  signature   String?
+  signedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  quote       Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  quoteId       String
+  amount        Float
+  currency      String   @default("USD")
+  status        String   @default("pending")
+  paymentMethod String?
+  transactionId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  quote         Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
 }

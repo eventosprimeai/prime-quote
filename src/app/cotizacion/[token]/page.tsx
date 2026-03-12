@@ -11,6 +11,7 @@ import {
   Loader2,
   X,
   Check,
+  CheckCircle2,
   FileText,
   ArrowRight,
   CreditCard,
@@ -25,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Logo } from "@/components/ui/logo";
+import { ChatWidget } from "@/components/ui/chat-widget";
 import Link from "next/link";
 import { toast } from "sonner";
 import * as Icons from "lucide-react";
@@ -101,6 +103,7 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
   const [quote, setQuote] = useState<Quote | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isApproving, setIsApproving] = useState(false);
 
   useEffect(() => {
     fetchQuote();
@@ -142,9 +145,36 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
     toast.success("Enlace copiado al portapapeles");
   };
 
+  const handleApprove = async () => {
+    if (!quote) return;
+    setIsApproving(true);
+    
+    try {
+      // In a real app we would open a modal to draw signature or type name, 
+      // but for this MVP showcase we auto-sign.
+      const response = await fetch(`/api/quotes/${token}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signature: "Aprobación Electrónica del Cliente" })
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al aprobar");
+      }
+
+      toast.success("Cotización aprobada correctamente. Redirigiendo a pagos...");
+      setQuote({ ...quote, status: "accepted" });
+      
+    } catch (err) {
+      toast.error("Hubo un problema al aprobar la cotización.");
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
   const getIcon = (iconName: string | null) => {
     if (!iconName) return FileText;
-    const Icon = (Icons as Record<string, React.ComponentType<{ className?: string }>>)[iconName];
+    const Icon = (Icons as any)[iconName] as React.ElementType;
     return Icon || Icons.FileText;
   };
 
@@ -272,7 +302,7 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
           {parsed.intro && <p className="text-muted-foreground text-lg">{parsed.intro}</p>}
           <div className="grid gap-5">
             {parsed.pages?.map((page: { title: string; icon?: string; sections?: string[] }, i: number) => {
-              const PageIcon = page.icon ? (Icons as Record<string, React.ComponentType<{ className?: string }>>)[page.icon] || FileText : FileText;
+              const PageIcon = page.icon ? ((Icons as any)[page.icon] as React.ElementType) || FileText : FileText;
               return (
                 <motion.div
                   key={i}
@@ -675,9 +705,39 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
                       <CreditCard className="w-8 h-8 text-white" />
                     </motion.div>
                     <h3 className="text-3xl font-bold mb-3">¿Listo para comenzar?</h3>
-                    <p className="text-muted-foreground text-lg">
-                      {profile?.conditions || "Para iniciar el proyecto, realiza el pago del valor acordado"}
+                    <p className="text-muted-foreground text-lg mb-8">
+                      {profile?.conditions || "Para iniciar el proyecto, aprueba esta cotización y realiza el pago."}
                     </p>
+                    
+                    {/* Approve Button / Payment Button */}
+                    <div className="mt-8 border-t border-border/50 pt-8">
+                       {quote.status === "accepted" ? (
+                         <motion.div 
+                           initial={{ opacity: 0, y: 10 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           className="flex flex-col items-center gap-5"
+                         >
+                           <div className="flex items-center gap-2 text-green-500 font-bold bg-green-500/10 px-6 py-3 rounded-full border border-green-500/20">
+                              <CheckCircle2 className="w-5 h-5" /> Cotización Aprobada y Contrato Generado
+                           </div>
+                           <Button 
+                             className="btn-primary w-full sm:w-auto h-14 px-10 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform" 
+                             onClick={() => toast.success("Redirigiendo de forma segura a DataFast...")}
+                           >
+                             <CreditCard className="w-5 h-5 mr-3" /> Pagar Anticipo (DataFast)
+                           </Button>
+                         </motion.div>
+                       ) : (
+                         <Button 
+                           disabled={isApproving}
+                           onClick={handleApprove}
+                           className="btn-neon w-full sm:w-auto h-14 px-10 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+                         >
+                           {isApproving ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : <PenLine className="w-6 h-6 mr-3" />}
+                           Aprobar y Firmar Digitalmente
+                         </Button>
+                       )}
+                    </div>
                   </div>
 
                   {quote.projectPrice && (
@@ -770,6 +830,9 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
           </p>
         </div>
       </footer>
+
+      {/* Floating Chat */}
+      <ChatWidget token={token} />
     </div>
   );
 }

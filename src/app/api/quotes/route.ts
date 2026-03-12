@@ -28,7 +28,19 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     });
 
-    return NextResponse.json(quotes);
+    const dbUser = await db.user.findUnique({
+      where: { id: user.id },
+      select: { plan: true, quotesCreatedCount: true }
+    });
+
+    return NextResponse.json({
+      quotes,
+      usage: {
+        plan: dbUser?.plan || 'FREE',
+        count: dbUser?.quotesCreatedCount || 0,
+        limit: 10
+      }
+    });
   } catch (error) {
     console.error('Get quotes error:', error);
     return NextResponse.json({ error: 'Error al obtener cotizaciones' }, { status: 500 });
@@ -57,6 +69,19 @@ export async function POST(request: NextRequest) {
       customSections,
       logoUrl,
     } = body;
+
+    // Check usage limits
+    const dbUser = await db.user.findUnique({ where: { id: user.id } });
+    if (!dbUser) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    if (dbUser.plan === 'FREE' && dbUser.quotesCreatedCount >= 10) {
+      return NextResponse.json({ 
+        error: 'Límite alcanzado',
+        message: 'Has alcanzado el límite de 10 cotizaciones gratuitas. Actualiza tu plan a PRO para continuar.' 
+      }, { status: 403 });
+    }
 
     // Get template sections
     const templateSections = await db.templateSection.findMany({
@@ -112,6 +137,12 @@ export async function POST(request: NextRequest) {
         sections: true,
         customSections: true,
       }
+    });
+
+    // Increment usage counter
+    await db.user.update({
+      where: { id: user.id },
+      data: { quotesCreatedCount: { increment: 1 } }
     });
 
     return NextResponse.json(quote);
