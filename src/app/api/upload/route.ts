@@ -22,6 +22,24 @@ export async function POST(request: NextRequest) {
     const type = formData.get('type') as string; // 'logo' | 'reference' | 'profile-logo'
     const quoteId = formData.get('quoteId') as string | null;
 
+    const dbUser = await db.user.findUnique({
+      where: { id: user.id },
+      select: { plan: true, role: true }
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    // SAAS Limitation: Free tier cannot upload logos
+    const isLogoUpload = type === 'logo' || type === 'profile-logo';
+    if (isLogoUpload && dbUser.plan === 'FREE' && dbUser.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Para subir tu propio logo, actualiza a nuestro plan PRO ($5/mes).' },
+        { status: 403 }
+      );
+    }
+
     if (!file) {
       return NextResponse.json({ error: 'No se proporcionó archivo' }, { status: 400 });
     }

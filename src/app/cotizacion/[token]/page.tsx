@@ -92,6 +92,8 @@ interface Quote {
   };
   user: {
     name: string;
+    role: string;
+    plan: string;
     profile: BusinessProfile | null;
   };
   sections: QuoteSection[];
@@ -472,7 +474,7 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
             className="text-center"
           >
             {/* Client Logo */}
-            {quote.logoUrl && (
+            {quote.logoUrl && (quote.user.plan !== "FREE" || quote.user.role === "admin") && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -825,9 +827,14 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
               <Logo size="md" />
             </Link>
           </motion.div>
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Todos los derechos reservados.
+          <p className="text-sm text-muted-foreground mt-4">
+            © {new Date().getFullYear()} {quote.companyName}. Todos los derechos reservados.
           </p>
+          {quote.user.plan === "FREE" && quote.user.role !== "admin" && (
+            <p className="text-xs text-muted-foreground/60 mt-2 font-medium">
+              Powered by <a href="https://quote.eventosprimeai.com" target="_blank" rel="noopener noreferrer" className="text-neon-cyan hover:underline">Prime Quote</a>
+            </p>
+          )}
         </div>
       </footer>
 

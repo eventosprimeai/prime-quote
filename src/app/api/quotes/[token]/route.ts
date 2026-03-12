@@ -13,7 +13,10 @@ export async function GET(
       include: {
         template: true,
         user: {
-          include: {
+          select: {
+            name: true,
+            role: true,
+            plan: true,
             profile: true,
           },
         },

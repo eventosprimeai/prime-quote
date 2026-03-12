@@ -301,7 +301,7 @@ export default function HomePage() {
               <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-neon-cyan to-neon-magenta" />
               <div className="absolute -top-3 right-4 bg-neon-magenta text-white text-[10px] uppercase font-bold px-3 py-1 rounded-full shadow-lg shadow-neon-magenta/30">Popular</div>
               <h3 className="text-xl font-bold mb-2">Profesional</h3>
-              <p className="text-4xl font-extrabold mb-4">$9 <span className="text-sm font-normal text-muted-foreground">/ mes</span></p>
+              <p className="text-4xl font-extrabold mb-4">$5 <span className="text-sm font-normal text-muted-foreground">/ mes</span></p>
               <p className="text-muted-foreground text-sm mb-6 flex-grow">Para el freelance que necesita destacarse con identidad propia.</p>
               <ul className="space-y-3 mb-8 text-sm">
                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-neon-cyan" /> 100 Cotizaciones</li>
