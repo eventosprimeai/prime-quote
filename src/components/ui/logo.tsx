@@ -125,7 +125,7 @@ export function Logo({ size = "md", showText = true, className }: LogoProps) {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
             >
-              Eventos Prime
+              Cotizador Premium de Servicios Profesionales
             </motion.span>
           )}
         </div>
