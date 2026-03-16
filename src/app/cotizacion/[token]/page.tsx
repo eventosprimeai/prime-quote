@@ -83,6 +83,8 @@ interface Quote {
   phone: string | null;
   projectName: string | null;
   projectPrice: number | null;
+  quoteType: "FIXED" | "PERCENTAGE";
+  percentageValue: number | null;
   currency: string;
   status: string;
   paymentLink: string | null;
@@ -533,7 +535,7 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
               </motion.div>
             </div>
 
-            {quote.projectPrice && (
+            {(quote.quoteType === "FIXED" || !quote.quoteType) && quote.projectPrice && (
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -544,6 +546,27 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
                 <span className="text-4xl md:text-5xl font-bold text-gradient">
                   {formatCurrency(quote.projectPrice)}
                 </span>
+              </motion.div>
+            )}
+
+            {quote.quoteType === "PERCENTAGE" && quote.percentageValue && (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.5, type: "spring" }}
+                className="inline-flex items-center gap-4 px-8 py-5 rounded-2xl bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-green-500/10 border border-green-500/20 backdrop-blur-sm shadow-lg shadow-green-500/5 group hover:scale-105 transition-transform"
+              >
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white shadow-inner group-hover:rotate-12 transition-transform">
+                  <span className="text-2xl font-bold drop-shadow-md">%</span>
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-green-500 to-emerald-400">
+                    {quote.percentageValue}%
+                  </span>
+                  <span className="text-sm md:text-base font-semibold text-green-500 uppercase tracking-widest mt-1">
+                    Participación de Ganancias
+                  </span>
+                </div>
               </motion.div>
             )}
           </motion.div>
@@ -753,7 +776,7 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
                     </div>
                   </div>
 
-                  {quote.projectPrice && (
+                  {(quote.quoteType === "FIXED" || !quote.quoteType) && quote.projectPrice && (
                     <div className="grid md:grid-cols-2 gap-6 mb-10">
                       <motion.div
                         initial={{ opacity: 0, x: -20 }}
@@ -783,6 +806,22 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
                         </p>
                         <p className="text-sm text-muted-foreground relative">Al momento de la entrega</p>
                       </motion.div>
+                    </div>
+                  )}
+
+                  {quote.quoteType === "PERCENTAGE" && quote.percentageValue && (
+                    <div className="mb-10 p-8 rounded-2xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 text-center relative overflow-hidden group">
+                      <div className="absolute inset-0 bg-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4 relative z-10 text-green-500">
+                        <span className="text-3xl font-bold">%</span>
+                      </div>
+                      <p className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-500 to-emerald-400 mb-2 relative">
+                        {quote.percentageValue}% de Participación en Utilidades
+                      </p>
+                      <p className="text-muted-foreground max-w-lg mx-auto relative">
+                        Como socio estratégico, mis honorarios corresponden estrictamente al {quote.percentageValue}% 
+                        de las ganancias generadas a través del proyecto o negocio, según los acuerdos pactados en el contrato.
+                      </p>
                     </div>
                   )}
 

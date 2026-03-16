@@ -71,7 +71,9 @@ export default function NuevaCotizacionPage() {
   const [phone, setPhone] = useState("");
   const [projectName, setProjectName] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
+  const [quoteType, setQuoteType] = useState<"FIXED" | "PERCENTAGE">("FIXED");
   const [projectPrice, setProjectPrice] = useState("");
+  const [percentageValue, setPercentageValue] = useState("");
   const [paymentLink, setPaymentLink] = useState("");
   
   // Logo
@@ -274,6 +276,8 @@ export default function NuevaCotizacionPage() {
         phone,
         projectName,
         internalNotes,
+        quoteType,
+        percentageValue: percentageValue ? parseFloat(percentageValue) : null,
         projectPrice: projectPrice ? parseFloat(projectPrice) : null,
         paymentLink: paymentLink.trim() || null,
         currency: "USD",
@@ -418,7 +422,21 @@ export default function NuevaCotizacionPage() {
                   <Separator />
                   <div className="space-y-4">
                     <div className="space-y-2"><Label>Nombre del proyecto</Label><Input placeholder="Desarrollo Web Corporativo" value={projectName} onChange={e => setProjectName(e.target.value)} /></div>
-                    <div className="space-y-2"><Label>Precio del proyecto (USD)</Label><Input type="number" placeholder="600.00" value={projectPrice} onChange={e => setProjectPrice(e.target.value)} /></div>
+                    <div className="space-y-2">
+                      <Label>Tipo de Cobro</Label>
+                      <Select value={quoteType} onValueChange={(val: "FIXED" | "PERCENTAGE") => setQuoteType(val)}>
+                        <SelectTrigger><SelectValue placeholder="Seleccione el tipo de cobro" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FIXED">Cobro Fijo</SelectItem>
+                          <SelectItem value="PERCENTAGE">Porcentaje de Participación (Socios)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {quoteType === "FIXED" ? (
+                      <div className="space-y-2"><Label>Precio del proyecto (USD)</Label><Input type="number" placeholder="600.00" value={projectPrice} onChange={e => setProjectPrice(e.target.value)} /></div>
+                    ) : (
+                      <div className="space-y-2"><Label>Porcentaje de Participación (%)</Label><Input type="number" placeholder="25" value={percentageValue} onChange={e => setPercentageValue(e.target.value)} /></div>
+                    )}
                     <div className="space-y-2"><Label>Enlace de Pago WooCommerce (Opcional)</Label><Input placeholder="https://eventosprimeai.com/..." value={paymentLink} onChange={e => setPaymentLink(e.target.value)} type="url" /></div>
                     <div className="space-y-2"><Label>Notas internas</Label><Textarea placeholder="Notas privadas..." value={internalNotes} onChange={e => setInternalNotes(e.target.value)} rows={3} /></div>
                   </div>
@@ -570,7 +588,8 @@ export default function NuevaCotizacionPage() {
                     <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                       {contactName && <p>Contacto: {contactName}</p>}
                       {email && <p>Email: {email}</p>}
-                      {projectPrice && <p className="col-span-2 font-bold text-primary text-lg mt-2">${parseFloat(projectPrice).toLocaleString("es-EC")}</p>}
+                      {quoteType === "FIXED" && projectPrice && <p className="col-span-2 font-bold text-primary text-lg mt-2">${parseFloat(projectPrice).toLocaleString("es-EC")}</p>}
+                      {quoteType === "PERCENTAGE" && percentageValue && <p className="col-span-2 font-bold text-primary text-lg mt-2">{percentageValue}% Participación</p>}
                     </div>
                   </div>
                   <div>

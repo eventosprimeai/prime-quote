@@ -87,6 +87,8 @@ model Quote {
   projectName    String?
   internalNotes  String?
   projectPrice   Float?
+  quoteType      String             @default("FIXED") // "FIXED" | "PERCENTAGE"
+  percentageValue Float?
   currency       String             @default("USD")
   status         String             @default("draft")
   paymentLink    String?
