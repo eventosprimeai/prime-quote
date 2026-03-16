@@ -85,6 +85,7 @@ interface Quote {
   projectPrice: number | null;
   currency: string;
   status: string;
+  paymentLink: string | null;
   logoUrl: string | null;
   createdAt: string;
   template: {
@@ -164,8 +165,14 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
         throw new Error("Error al aprobar");
       }
 
-      toast.success("Cotización aprobada correctamente. Redirigiendo a pagos...");
+      toast.success("Cotización aprobada. Preparando pago...");
       setQuote({ ...quote, status: "accepted" });
+      
+      setTimeout(() => {
+        if (quote.paymentLink) {
+          window.location.href = quote.paymentLink;
+        }
+      }, 2000);
       
     } catch (err) {
       toast.error("Hubo un problema al aprobar la cotización.");
@@ -722,12 +729,16 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
                            <div className="flex items-center gap-2 text-green-500 font-bold bg-green-500/10 px-6 py-3 rounded-full border border-green-500/20">
                               <CheckCircle2 className="w-5 h-5" /> Cotización Aprobada y Contrato Generado
                            </div>
-                           <Button 
-                             className="btn-primary w-full sm:w-auto h-14 px-10 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform" 
-                             onClick={() => toast.success("Redirigiendo de forma segura a DataFast...")}
-                           >
-                             <CreditCard className="w-5 h-5 mr-3" /> Pagar Anticipo (DataFast)
-                           </Button>
+                           <a href={quote.paymentLink || "#"} target={quote.paymentLink ? "_blank" : "_self"} rel="noopener noreferrer">
+                             <Button 
+                               className="btn-primary w-full sm:w-auto h-14 px-10 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform" 
+                               onClick={() => {
+                                 if (!quote.paymentLink) toast.info("Link de pago pendiente de asignación");
+                               }}
+                             >
+                               <CreditCard className="w-5 h-5 mr-3" /> Pagar Anticipo (DataFast)
+                             </Button>
+                           </a>
                          </motion.div>
                        ) : (
                          <Button 

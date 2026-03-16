@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
       sections,
       customSections,
       logoUrl,
+      paymentLink,
     } = body;
 
     // Check usage limits
@@ -112,6 +113,7 @@ export async function POST(request: NextRequest) {
         projectPrice: projectPrice || null,
         currency: currency || 'USD',
         status: 'sent',
+        paymentLink: paymentLink || null,
         logoUrl: logoUrl || null,
         sections: {
           create: templateSections.map((ts) => ({

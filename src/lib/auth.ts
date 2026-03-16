@@ -1,15 +1,11 @@
 import { db } from './db';
 import { cookies } from 'next/headers';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 
 const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
 
 export async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return createHash('sha256').update(password).digest('hex');
 }
 
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {

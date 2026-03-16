@@ -89,6 +89,7 @@ model Quote {
   projectPrice   Float?
   currency       String             @default("USD")
   status         String             @default("draft")
+  paymentLink    String?
   logoUrl        String?
   validUntil     DateTime?
   createdAt      DateTime           @default(now())

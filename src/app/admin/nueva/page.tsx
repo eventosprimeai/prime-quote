@@ -72,6 +72,7 @@ export default function NuevaCotizacionPage() {
   const [projectName, setProjectName] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
   const [projectPrice, setProjectPrice] = useState("");
+  const [paymentLink, setPaymentLink] = useState("");
   
   // Logo
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -274,6 +275,7 @@ export default function NuevaCotizacionPage() {
         projectName,
         internalNotes,
         projectPrice: projectPrice ? parseFloat(projectPrice) : null,
+        paymentLink: paymentLink.trim() || null,
         currency: "USD",
         logoUrl: finalLogoUrl || null,
         sections: reqSections,
@@ -417,6 +419,7 @@ export default function NuevaCotizacionPage() {
                   <div className="space-y-4">
                     <div className="space-y-2"><Label>Nombre del proyecto</Label><Input placeholder="Desarrollo Web Corporativo" value={projectName} onChange={e => setProjectName(e.target.value)} /></div>
                     <div className="space-y-2"><Label>Precio del proyecto (USD)</Label><Input type="number" placeholder="600.00" value={projectPrice} onChange={e => setProjectPrice(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Enlace de Pago WooCommerce (Opcional)</Label><Input placeholder="https://eventosprimeai.com/..." value={paymentLink} onChange={e => setPaymentLink(e.target.value)} type="url" /></div>
                     <div className="space-y-2"><Label>Notas internas</Label><Textarea placeholder="Notas privadas..." value={internalNotes} onChange={e => setInternalNotes(e.target.value)} rows={3} /></div>
                   </div>
                   <div className="flex justify-end pt-4"><Button onClick={() => setStep(2)} disabled={!companyName.trim()}>Continuar <ArrowRight className="ml-2 w-4 h-4" /></Button></div>

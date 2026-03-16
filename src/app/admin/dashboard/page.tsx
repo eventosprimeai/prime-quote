@@ -18,7 +18,8 @@ import {
   Clock,
   UserCircle,
   LogOut,
-  Sparkles
+  Sparkles,
+  MessageCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,9 +51,14 @@ export default function DashboardPage() {
     count: 0,
     limit: 10
   });
+  const [unreadMap, setUnreadMap] = useState<Record<string, { count: number }>>({});
+  const [totalUnread, setTotalUnread] = useState(0);
 
   useEffect(() => {
     fetchQuotes();
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleLogout = async () => {
@@ -82,6 +88,24 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchUnread = async () => {
+    try {
+      const res = await fetch('/api/chat/unread');
+      if (res.ok) {
+        const data = await res.json();
+        setTotalUnread(data.totalUnread || 0);
+        const map: Record<string, { count: number }> = {};
+        if (data.quotes) {
+          for (const [qId, info] of Object.entries(data.quotes as Record<string, { count: number }>)) {
+            map[qId] = { count: info.count };
+          }
+        }
+        setUnreadMap(map);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
 
   const getStatusBadge = (status: string) => {
@@ -422,6 +446,15 @@ export default function DashboardPage() {
                           
                           {/* Right side */}
                           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                            {/* Unread chat badge */}
+                            {unreadMap[quote.id] && unreadMap[quote.id].count > 0 && (
+                              <div className="relative">
+                                <MessageCircle className="w-5 h-5 text-primary" />
+                                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
+                                  {unreadMap[quote.id].count}
+                                </span>
+                              </div>
+                            )}
                             <span className="text-sm sm:text-base font-semibold text-gradient hidden sm:block">
                               {formatCurrency(quote.projectPrice)}
                             </span>
