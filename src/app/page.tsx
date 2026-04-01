@@ -302,9 +302,10 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <Logo size="sm" />
-            <p className="text-sm text-muted-foreground flex flex-wrap items-center justify-center sm:justify-end gap-x-2">
-              <span>© {new Date().getFullYear()} Todos los derechos reservados.</span>
-              <Link href="/legal" className="text-muted-foreground/50 hover:text-primary transition-colors text-xs sm:text-sm">
+            <p className="text-sm text-muted-foreground text-center sm:text-right">
+              © {new Date().getFullYear()} Todos los derechos reservados.{" "}
+              <span className="text-muted-foreground/30 select-none mx-1">·</span>
+              <Link href="/legal" className="text-muted-foreground/50 hover:text-primary transition-colors">
                 Políticas, Privacidad y Cookies
               </Link>
             </p>
