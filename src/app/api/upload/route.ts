@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const isLogoUpload = type === 'logo' || type === 'profile-logo';
     if (isLogoUpload && dbUser.plan === 'FREE' && dbUser.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Para subir tu propio logo, actualiza a nuestro plan PRO ($5/mes).' },
+        { error: 'Para subir tu propio logo, actualiza a nuestro plan Starter ($9/mes).' },
         { status: 403 }
       );
     }

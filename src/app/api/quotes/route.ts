@@ -10,6 +10,17 @@ export async function GET() {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
+    const PLAN_LIMITS: Record<string, number> = {
+      FREE: 10,
+      STARTER: 50,
+      PRO: 150,
+      EMBAJADOR: 20,
+      CREADOR_ANGEL: 50,
+      SUITE: Infinity,
+      EMPRESARIAL: Infinity,
+      AGENCY: Infinity
+    };
+
     const quotes = await db.quote.findMany({
       where: { userId: user.id },
       include: {
@@ -33,12 +44,15 @@ export async function GET() {
       select: { plan: true, quotesCreatedCount: true }
     });
 
+    const plan = dbUser?.plan || 'FREE';
+    const limit = PLAN_LIMITS[plan] || 10;
+
     return NextResponse.json({
       quotes,
       usage: {
-        plan: dbUser?.plan || 'FREE',
+        plan,
         count: dbUser?.quotesCreatedCount || 0,
-        limit: 10
+        limit: limit === Infinity ? -1 : limit
       }
     });
   } catch (error) {
@@ -53,6 +67,17 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
+
+    const PLAN_LIMITS: Record<string, number> = {
+      FREE: 10,
+      STARTER: 50,
+      PRO: 150,
+      EMBAJADOR: 20,
+      CREADOR_ANGEL: 50,
+      SUITE: Infinity,
+      EMPRESARIAL: Infinity,
+      AGENCY: Infinity
+    };
 
     const body = await request.json();
     const {
@@ -79,10 +104,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    if (dbUser.plan === 'FREE' && dbUser.quotesCreatedCount >= 10) {
+    const userPlan = dbUser.plan || 'FREE';
+    const limit = PLAN_LIMITS[userPlan] || 10;
+
+    if (dbUser.quotesCreatedCount >= limit) {
       return NextResponse.json({ 
         error: 'Límite alcanzado',
-        message: 'Has alcanzado el límite de 10 cotizaciones gratuitas. Actualiza tu plan a PRO para continuar.' 
+        message: `Has alcanzado el límite de ${limit} cotizaciones para tu plan actual. Actualiza tu plan para continuar.` 
       }, { status: 403 });
     }
 

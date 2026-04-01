@@ -81,17 +81,17 @@ export default function PricingCoverflow() {
               <span className={`text-sm font-semibold ${!isAnnual ? 'text-white' : 'text-muted-foreground'}`}>Mensual</span>
               <button 
                 onClick={() => setIsAnnual(!isAnnual)}
-                className="w-14 h-7 rounded-full relative transition-colors duration-300 focus:outline-none"
-                style={{ background: isAnnual ? appColor : 'oklch(0.2 0.015 270)' }}
+                type="button"
+                className="relative inline-flex h-8 w-16 items-center flex-shrink-0 cursor-pointer rounded-full transition-colors duration-300 ease-in-out focus:outline-none"
+                style={{ backgroundColor: isAnnual ? appColor : 'rgba(255, 255, 255, 0.15)' }}
               >
-                <div 
-                  className="w-5 h-5 bg-white rounded-full absolute top-1 transition-all duration-300 shadow-md"
-                  style={{ left: isAnnual ? 'calc(100% - 24px)' : '4px' }}
+                <span 
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-300 ease-in-out ${isAnnual ? 'translate-x-9' : 'translate-x-1'}`}
                 />
               </button>
-              <div className="flex flex-col items-start leading-none">
+              <div className="flex flex-col items-start leading-none h-6 justify-center relative">
                 <span className={`text-sm font-semibold ${isAnnual ? 'text-white' : 'text-muted-foreground'}`}>Anual</span>
-                {isAnnual && <span className="text-[10px] text-[#a855f7] font-bold tracking-wider uppercase mt-1">Ahorras 1.5 meses</span>}
+                {isAnnual && <span className="absolute top-full mt-1 text-[10px] text-[#a855f7] font-bold tracking-wider uppercase whitespace-nowrap">Ahorras 12.5%</span>}
               </div>
             </div>
 

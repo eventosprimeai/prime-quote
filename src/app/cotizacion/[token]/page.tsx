@@ -83,7 +83,7 @@ interface Quote {
   phone: string | null;
   projectName: string | null;
   projectPrice: number | null;
-  quoteType: "FIXED" | "PERCENTAGE";
+  quoteType: string;
   percentageValue: number | null;
   currency: string;
   status: string;
@@ -535,7 +535,7 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
               </motion.div>
             </div>
 
-            {(quote.quoteType === "FIXED" || !quote.quoteType) && quote.projectPrice && (
+            {(quote.quoteType === "SINGLE" || quote.quoteType === "SPLIT" || quote.quoteType === "CUSTOM" || quote.quoteType === "FIXED" || !quote.quoteType) && quote.projectPrice && (
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -776,7 +776,7 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
                     </div>
                   </div>
 
-                  {(quote.quoteType === "FIXED" || !quote.quoteType) && quote.projectPrice && (
+                  {(quote.quoteType === "SPLIT" || quote.quoteType === "FIXED" || !quote.quoteType) && quote.projectPrice && (
                     <div className="grid md:grid-cols-2 gap-6 mb-10">
                       <motion.div
                         initial={{ opacity: 0, x: -20 }}
@@ -806,6 +806,17 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
                         </p>
                         <p className="text-sm text-muted-foreground relative">Al momento de la entrega</p>
                       </motion.div>
+                    </div>
+                  )}
+
+                  {quote.quoteType === "SINGLE" && quote.projectPrice && (
+                    <div className="mb-10 p-8 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/5 border border-primary/20 text-center relative overflow-hidden group">
+                      <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <p className="text-sm text-muted-foreground mb-3 relative">Pago Único (100%)</p>
+                      <p className="text-4xl font-bold text-gradient mb-3 relative">
+                        {formatCurrency(quote.projectPrice)}
+                      </p>
+                      <p className="text-sm text-muted-foreground relative">Liquidación total programada</p>
                     </div>
                   )}
 

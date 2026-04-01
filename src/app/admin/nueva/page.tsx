@@ -71,10 +71,11 @@ export default function NuevaCotizacionPage() {
   const [phone, setPhone] = useState("");
   const [projectName, setProjectName] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
-  const [quoteType, setQuoteType] = useState<"FIXED" | "PERCENTAGE">("FIXED");
+  const [quoteType, setQuoteType] = useState<"SINGLE" | "SPLIT" | "CUSTOM" | "PERCENTAGE">("SINGLE");
   const [projectPrice, setProjectPrice] = useState("");
   const [percentageValue, setPercentageValue] = useState("");
   const [paymentLink, setPaymentLink] = useState("");
+  const [customPaymentDetails, setCustomPaymentDetails] = useState("");
   
   // Logo
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -132,7 +133,7 @@ export default function NuevaCotizacionPage() {
   };
 
   const getIcon = (iconName: string) => {
-    const Icon = (Icons as Record<string, React.ComponentType<{ className?: string }>>)[iconName] || Icons.FileText;
+    const Icon = ((Icons as unknown) as Record<string, React.ElementType>)[iconName] || Icons.FileText;
     return Icon;
   };
 
@@ -267,6 +268,14 @@ export default function NuevaCotizacionPage() {
 
       // Only include legacy sections if admin and they exist
       const reqSections = isAdmin ? sections.filter(s => s.isVisible).map(s => ({ key: s.key, content: s.content, isVisible: true })) : [];
+
+      // Sólo añade la sección custom de pagos si es tipo CUSTOM
+      if (quoteType === "CUSTOM" && customPaymentDetails.trim()) {
+        processedBlocks.push({
+          title: "Detalles de Liquidación",
+          content: JSON.stringify({ type: "text", text: customPaymentDetails })
+        });
+      }
 
       const payload = {
         templateId: selectedTemplate?.id || "default", // will be ignored or matched in API
@@ -424,20 +433,31 @@ export default function NuevaCotizacionPage() {
                     <div className="space-y-2"><Label>Nombre del proyecto</Label><Input placeholder="Desarrollo Web Corporativo" value={projectName} onChange={e => setProjectName(e.target.value)} /></div>
                     <div className="space-y-2">
                       <Label>Tipo de Cobro</Label>
-                      <Select value={quoteType} onValueChange={(val: "FIXED" | "PERCENTAGE") => setQuoteType(val)}>
+                      <Select value={quoteType} onValueChange={(val: "SINGLE" | "SPLIT" | "CUSTOM" | "PERCENTAGE") => setQuoteType(val)}>
                         <SelectTrigger><SelectValue placeholder="Seleccione el tipo de cobro" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="FIXED">Cobro Fijo</SelectItem>
+                          <SelectItem value="SINGLE">Pago Único</SelectItem>
+                          <SelectItem value="SPLIT">Pago en dos partes</SelectItem>
                           <SelectItem value="PERCENTAGE">Porcentaje de Participación (Socios)</SelectItem>
+                          <SelectItem value="CUSTOM">Personalizado</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    {quoteType === "FIXED" ? (
+                    {quoteType === "SINGLE" || quoteType === "SPLIT" ? (
                       <div className="space-y-2"><Label>Precio del proyecto (USD)</Label><Input type="number" placeholder="600.00" value={projectPrice} onChange={e => setProjectPrice(e.target.value)} /></div>
-                    ) : (
+                    ) : quoteType === "PERCENTAGE" ? (
                       <div className="space-y-2"><Label>Porcentaje de Participación (%)</Label><Input type="number" placeholder="25" value={percentageValue} onChange={e => setPercentageValue(e.target.value)} /></div>
+                    ) : (
+                      <>
+                        <div className="space-y-2"><Label>Precio referencial (USD, Opcional)</Label><Input type="number" placeholder="Opcional..." value={projectPrice} onChange={e => setProjectPrice(e.target.value)} /></div>
+                        <div className="space-y-2"><Label>Detalles de Pago Personalizado</Label><Textarea placeholder="Ej: 30% inicial, 30% proforma, 40% final..." value={customPaymentDetails} onChange={e => setCustomPaymentDetails(e.target.value)} rows={3} /></div>
+                      </>
                     )}
-                    <div className="space-y-2"><Label>Enlace de Pago WooCommerce (Opcional)</Label><Input placeholder="https://eventosprimeai.com/..." value={paymentLink} onChange={e => setPaymentLink(e.target.value)} type="url" /></div>
+                    <div className="space-y-2">
+                      <Label>Enlace de pago preferido (Opcional)</Label>
+                      <p className="text-[0.8rem] text-muted-foreground leading-tight">Admite links de PayPal, Stripe, Payphone, Mercado Pago, Conekta, dLocal Go, Square y Kushki.</p>
+                      <Input placeholder="https://..." value={paymentLink} onChange={e => setPaymentLink(e.target.value)} type="url" />
+                    </div>
                     <div className="space-y-2"><Label>Notas internas</Label><Textarea placeholder="Notas privadas..." value={internalNotes} onChange={e => setInternalNotes(e.target.value)} rows={3} /></div>
                   </div>
                   <div className="flex justify-end pt-4"><Button onClick={() => setStep(2)} disabled={!companyName.trim()}>Continuar <ArrowRight className="ml-2 w-4 h-4" /></Button></div>
@@ -588,7 +608,7 @@ export default function NuevaCotizacionPage() {
                     <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                       {contactName && <p>Contacto: {contactName}</p>}
                       {email && <p>Email: {email}</p>}
-                      {quoteType === "FIXED" && projectPrice && <p className="col-span-2 font-bold text-primary text-lg mt-2">${parseFloat(projectPrice).toLocaleString("es-EC")}</p>}
+                      {(quoteType === "SINGLE" || quoteType === "SPLIT" || quoteType === "CUSTOM") && projectPrice && <p className="col-span-2 font-bold text-primary text-lg mt-2">${parseFloat(projectPrice).toLocaleString("es-EC")}</p>}
                       {quoteType === "PERCENTAGE" && percentageValue && <p className="col-span-2 font-bold text-primary text-lg mt-2">{percentageValue}% Participación</p>}
                     </div>
                   </div>
