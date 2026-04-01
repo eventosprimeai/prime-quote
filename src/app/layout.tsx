@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
+import CookiesBanner from "@/components/cookies-banner";
+
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -31,6 +33,7 @@ export default function RootLayout({
       >
         {children}
         <Toaster richColors position="top-right" />
+        <CookiesBanner />
       </body>
     </html>
   );

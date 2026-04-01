@@ -155,7 +155,9 @@ model QuoteMessage {
   id        String   @id @default(cuid())
   quoteId   String
   sender    String   // "ADMIN" or "CLIENT"
+  type      String   @default("MESSAGE") // "MESSAGE" | "MODIFICATION_REQUEST" | "PAYMENT_CAPTURE"
   text      String
+  imageUrl  String?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
   quote     Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
@@ -165,6 +167,7 @@ model Contract {
   id          String    @id @default(cuid())
   quoteId     String    @unique
   content     String
+  metadata    String?   // JSON array of contract extensions
   signature   String?
   signedAt    DateTime?
   createdAt   DateTime  @default(now())

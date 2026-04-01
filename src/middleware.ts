@@ -23,6 +23,9 @@ export function middleware(request: NextRequest) {
     (pathname.startsWith('/api/quotes/') && request.method === 'GET') ||
     pathname.match(/^\/api\/quotes\/[^\/]+\/chat$/) ||
     pathname.match(/^\/api\/quotes\/[^\/]+\/approve$/) ||
+    pathname.match(/^\/api\/quotes\/[^\/]+\/contract\/extend$/) ||
+    pathname.startsWith('/api/upload') ||
+    pathname.startsWith('/api/cron') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/uploads') ||
     pathname.endsWith('.svg') ||

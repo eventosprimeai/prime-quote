@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -14,6 +16,7 @@ export async function GET(
         template: true,
         user: {
           select: {
+            id: true,
             name: true,
             role: true,
             plan: true,
@@ -30,6 +33,10 @@ export async function GET(
           orderBy: { order: 'asc' }
         },
         images: true,
+        contract: true,
+        messages: {
+           orderBy: { createdAt: 'asc' }
+        }
       }
     });
 

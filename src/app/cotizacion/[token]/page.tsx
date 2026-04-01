@@ -63,6 +63,7 @@ interface PaymentMethod {
 }
 
 interface BusinessProfile {
+  userId: string;
   companyName: string | null;
   logoUrl: string | null;
   phone: string | null;
@@ -94,6 +95,7 @@ interface Quote {
     name: string;
   };
   user: {
+    id: string;
     name: string;
     role: string;
     plan: string;
@@ -101,6 +103,8 @@ interface Quote {
   };
   sections: QuoteSection[];
   customSections: CustomSection[];
+  messages?: any[];
+  contract?: { id: string; content: string; metadata: string | null; signature: string | null; signedAt: string; } | null;
 }
 
 export default function CotizacionPage({ params }: { params: Promise<{ token: string }> }) {
@@ -109,10 +113,28 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isApproving, setIsApproving] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // States for Extensions / Capture
+  const [isUploadingCapture, setIsUploadingCapture] = useState(false);
+  const [showExtensionInput, setShowExtensionInput] = useState(false);
+  const [extensionText, setExtensionText] = useState("");
+  const [isSubmittingExtension, setIsSubmittingExtension] = useState(false);
 
   useEffect(() => {
+    fetchUser();
     fetchQuote();
   }, [token]);
+
+  const fetchUser = async () => {
+    try {
+       const res = await fetch("/api/auth/me");
+       if (res.ok) {
+         const data = await res.json();
+         setCurrentUser(data.user);
+       }
+    } catch {}
+  };
 
   const fetchQuote = async () => {
     try {
@@ -155,8 +177,6 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
     setIsApproving(true);
     
     try {
-      // In a real app we would open a modal to draw signature or type name, 
-      // but for this MVP showcase we auto-sign.
       const response = await fetch(`/api/quotes/${token}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -167,19 +187,83 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
         throw new Error("Error al aprobar");
       }
 
-      toast.success("Cotización aprobada. Preparando pago...");
-      setQuote({ ...quote, status: "accepted" });
-      
-      setTimeout(() => {
-        if (quote.paymentLink) {
-          window.location.href = quote.paymentLink;
-        }
-      }, 2000);
-      
+      toast.success("Cotización aprobada. Contrato Generado Exitosamente.");
+      fetchQuote(); // Reload to get contract and messages
     } catch (err) {
       toast.error("Hubo un problema al aprobar la cotización.");
     } finally {
       setIsApproving(false);
+    }
+  };
+
+  const handleExtension = async () => {
+    if (!quote) return;
+    if (!extensionText.trim()) { toast.error("El texto de la extensión no puede estar vacío"); return; }
+    
+    setIsSubmittingExtension(true);
+    
+    const isProfessional = currentUser && currentUser.id === quote.user.profile?.userId;
+    const action = isProfessional ? "DIRECT_EXTENSION" : "REQUEST_MODIFICATION";
+
+    try {
+      const response = await fetch(`/api/quotes/${token}/contract/extend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: extensionText, action })
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al enviar extensión");
+      }
+
+      toast.success(isProfessional ? "Extensión agregada formalmente al contrato" : "Solicitud de modificación enviada");
+      setExtensionText("");
+      setShowExtensionInput(false);
+      fetchQuote(); // Reload to get contract and messages
+    } catch (err) {
+      toast.error("Hubo un problema al procesar la extensión.");
+    } finally {
+      setIsSubmittingExtension(false);
+    }
+  };
+
+  const handleApproveModification = async (messageId: string) => {
+     try {
+       const res = await fetch(`/api/quotes/${token}/messages/${messageId}/approve`, { method: "POST" });
+       if (!res.ok) throw new Error();
+       toast.success("Solicitud aprobada e integrada al contrato");
+       fetchQuote();
+     } catch {
+       toast.error("Error al aprobar solicitud");
+     }
+  };
+
+  const handleCaptureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !quote) return;
+    
+    setIsUploadingCapture(true);
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", "payment_capture");
+    formData.append("quoteId", quote.id);
+
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al subir captura");
+      }
+
+      toast.success("Captura de pago enviada con éxito");
+      fetchQuote();
+    } catch (err) {
+      toast.error("Hubo un problema procesando la imagen de captura.");
+    } finally {
+      setIsUploadingCapture(false);
     }
   };
 
@@ -709,168 +793,225 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
         </div>
       </section>
 
-      {/* Dynamic Payment Info */}
-      {(paymentMethods.length > 0 || profile?.conditions) && (
+      {/* Dynamic Payment Info & Contract Hub */}
+      {(paymentMethods.length > 0 || profile?.conditions || quote.status === "accepted") && (
         <section className="px-6 pb-20">
           <div className="max-w-5xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-accent/5 overflow-hidden">
-                <div className="absolute inset-0 gradient-border-animated rounded-2xl pointer-events-none" />
-                
-                <CardContent className="p-10 relative">
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
-                  <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/10 rounded-full blur-3xl" />
-                  
-                  <div className="text-center mb-10 relative">
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      whileInView={{ scale: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ type: "spring", delay: 0.3 }}
-                      className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto mb-6 glow-primary"
-                    >
-                      <CreditCard className="w-8 h-8 text-white" />
-                    </motion.div>
-                    <h3 className="text-3xl font-bold mb-3">¿Listo para comenzar?</h3>
-                    <p className="text-muted-foreground text-lg mb-8">
-                      {profile?.conditions || "Para iniciar el proyecto, aprueba esta cotización y realiza el pago."}
-                    </p>
+            {quote.status !== "accepted" ? (
+              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }}>
+                <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-accent/5 overflow-hidden">
+                  <div className="absolute inset-0 gradient-border-animated rounded-2xl pointer-events-none" />
+                  <CardContent className="p-10 relative">
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
+                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/10 rounded-full blur-3xl" />
                     
-                    {/* Approve Button / Payment Button */}
-                    <div className="mt-8 border-t border-border/50 pt-8">
-                       {quote.status === "accepted" ? (
-                         <motion.div 
-                           initial={{ opacity: 0, y: 10 }}
-                           animate={{ opacity: 1, y: 0 }}
-                           className="flex flex-col items-center gap-5"
-                         >
-                           <div className="flex items-center gap-2 text-green-500 font-bold bg-green-500/10 px-6 py-3 rounded-full border border-green-500/20">
-                              <CheckCircle2 className="w-5 h-5" /> Cotización Aprobada y Contrato Generado
-                           </div>
-                           <a href={quote.paymentLink || "#"} target={quote.paymentLink ? "_blank" : "_self"} rel="noopener noreferrer">
-                             <Button 
-                               className="btn-primary w-full sm:w-auto h-14 px-10 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform" 
-                               onClick={() => {
-                                 if (!quote.paymentLink) toast.info("Link de pago pendiente de asignación");
-                               }}
-                             >
-                               <CreditCard className="w-5 h-5 mr-3" /> Pagar Anticipo (DataFast)
-                             </Button>
-                           </a>
-                         </motion.div>
-                       ) : (
-                         <Button 
-                           disabled={isApproving}
-                           onClick={handleApprove}
-                           className="btn-neon w-full sm:w-auto h-14 px-10 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
-                         >
-                           {isApproving ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : <PenLine className="w-6 h-6 mr-3" />}
-                           Aprobar y Firmar Digitalmente
-                         </Button>
-                       )}
-                    </div>
-                  </div>
-
-                  {(quote.quoteType === "SPLIT" || quote.quoteType === "FIXED" || !quote.quoteType) && quote.projectPrice && (
-                    <div className="grid md:grid-cols-2 gap-6 mb-10">
-                      <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: 0.4 }}
-                        className="p-7 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 text-center relative overflow-hidden group"
-                      >
-                        <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <p className="text-sm text-muted-foreground mb-3 relative">Primer pago (50%)</p>
-                        <p className="text-4xl font-bold text-gradient mb-3 relative">
-                          {formatCurrency(quote.projectPrice * 0.5)}
-                        </p>
-                        <p className="text-sm text-muted-foreground relative">Para iniciar el desarrollo</p>
+                    <div className="text-center mb-10 relative">
+                      <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ once: true }} transition={{ type: "spring", delay: 0.3 }} className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto mb-6 glow-primary">
+                        <CreditCard className="w-8 h-8 text-white" />
                       </motion.div>
-                      <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: 0.5 }}
-                        className="p-7 rounded-2xl bg-gradient-to-br from-accent/10 to-transparent border border-accent/20 text-center relative overflow-hidden group"
-                      >
-                        <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <p className="text-sm text-muted-foreground mb-3 relative">Pago final (50%)</p>
-                        <p className="text-4xl font-bold text-gradient mb-3 relative">
-                          {formatCurrency(quote.projectPrice * 0.5)}
-                        </p>
-                        <p className="text-sm text-muted-foreground relative">Al momento de la entrega</p>
-                      </motion.div>
-                    </div>
-                  )}
-
-                  {quote.quoteType === "SINGLE" && quote.projectPrice && (
-                    <div className="mb-10 p-8 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/5 border border-primary/20 text-center relative overflow-hidden group">
-                      <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <p className="text-sm text-muted-foreground mb-3 relative">Pago Único (100%)</p>
-                      <p className="text-4xl font-bold text-gradient mb-3 relative">
-                        {formatCurrency(quote.projectPrice)}
+                      <h3 className="text-3xl font-bold mb-3">¿Listo para comenzar?</h3>
+                      <p className="text-muted-foreground text-lg mb-8">
+                        {profile?.conditions || "Para iniciar el proyecto, aprueba esta cotización revisando detalladamente la propuesta superior."}
                       </p>
-                      <p className="text-sm text-muted-foreground relative">Liquidación total programada</p>
-                    </div>
-                  )}
-
-                  {quote.quoteType === "PERCENTAGE" && quote.percentageValue && (
-                    <div className="mb-10 p-8 rounded-2xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 text-center relative overflow-hidden group">
-                      <div className="absolute inset-0 bg-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4 relative z-10 text-green-500">
-                        <span className="text-3xl font-bold">%</span>
+                      
+                      <div className="mt-8 border-t border-border/50 pt-8">
+                        <Button disabled={isApproving} onClick={handleApprove} className="btn-neon w-full sm:w-auto h-14 px-10 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
+                          {isApproving ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : <PenLine className="w-6 h-6 mr-3" />}
+                          Aprobar y Firmar Digitalmente
+                        </Button>
                       </div>
-                      <p className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-500 to-emerald-400 mb-2 relative">
-                        {quote.percentageValue}% de Participación en Utilidades
-                      </p>
-                      <p className="text-muted-foreground max-w-lg mx-auto relative">
-                        Como socio estratégico, mis honorarios corresponden estrictamente al {quote.percentageValue}% 
-                        de las ganancias generadas a través del proyecto o negocio, según los acuerdos pactados en el contrato.
-                      </p>
                     </div>
-                  )}
 
-                  {/* Dynamic Payment Methods */}
-                  {paymentMethods.length > 0 && (
-                    <div className="grid md:grid-cols-2 gap-6 relative">
-                      {paymentMethods.map((pm, i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, y: 20 }}
-                          whileInView={{ opacity: 1, y: 0 }}
-                          viewport={{ once: true }}
-                          transition={{ delay: 0.6 + i * 0.1 }}
-                          className="p-6 rounded-xl bg-muted/30 border border-border/30"
-                        >
-                          <p className="font-semibold mb-4 flex items-center gap-2">
-                            <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                              <span className="text-primary text-sm font-bold">
-                                {String.fromCharCode(65 + i)}
-                              </span>
-                            </span>
-                            {pm.type || `Método ${i + 1}`}
-                          </p>
-                          <div className="space-y-2 text-sm text-muted-foreground">
-                            {pm.name && <p><span className="font-medium text-foreground">{pm.name}</span></p>}
-                            {pm.bank && <p>{pm.bank}{pm.accountType ? ` - ${pm.accountType}` : ""}</p>}
-                            {pm.accountNumber && <p>Cuenta: {pm.accountNumber}</p>}
-                            {pm.ruc && <p>{pm.ruc}</p>}
-                            {pm.email && <p>{pm.email}</p>}
-                            {pm.phone && <p>Tel: {pm.phone}</p>}
-                          </div>
+                    {(quote.quoteType === "SPLIT" || quote.quoteType === "FIXED" || !quote.quoteType) && quote.projectPrice && (
+                      <div className="grid md:grid-cols-2 gap-6 mb-10">
+                        <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.4 }} className="p-7 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 text-center relative overflow-hidden group">
+                          <p className="text-sm text-muted-foreground mb-3 relative">Primer pago (50%)</p>
+                          <p className="text-4xl font-bold text-gradient mb-3 relative">{formatCurrency(quote.projectPrice * 0.5)}</p>
+                          <p className="text-sm text-muted-foreground relative">Para iniciar el desarrollo</p>
                         </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
+                        <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.5 }} className="p-7 rounded-2xl bg-gradient-to-br from-accent/10 to-transparent border border-accent/20 text-center relative overflow-hidden group">
+                          <p className="text-sm text-muted-foreground mb-3 relative">Pago final (50%)</p>
+                          <p className="text-4xl font-bold text-gradient mb-3 relative">{formatCurrency(quote.projectPrice * 0.5)}</p>
+                          <p className="text-sm text-muted-foreground relative">Al momento de la entrega</p>
+                        </motion.div>
+                      </div>
+                    )}
+                    {quote.quoteType === "SINGLE" && quote.projectPrice && (
+                      <div className="mb-10 p-8 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/5 border border-primary/20 text-center relative overflow-hidden group">
+                        <p className="text-sm text-muted-foreground mb-3 relative">Pago Único (100%)</p>
+                        <p className="text-4xl font-bold text-gradient mb-3 relative">{formatCurrency(quote.projectPrice)}</p>
+                        <p className="text-sm text-muted-foreground relative">Liquidación total programada</p>
+                      </div>
+                    )}
+                    {quote.quoteType === "PERCENTAGE" && quote.percentageValue && (
+                      <div className="mb-10 p-8 rounded-2xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 text-center relative overflow-hidden group">
+                        <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4 relative z-10 text-green-500"><span className="text-3xl font-bold">%</span></div>
+                        <p className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-500 to-emerald-400 mb-2 relative">{quote.percentageValue}% de Participación en Utilidades</p>
+                      </div>
+                    )}
+                    {paymentMethods.length > 0 && (
+                      <div className="grid md:grid-cols-2 gap-6 relative">
+                        {paymentMethods.map((pm, i) => (
+                          <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.6 + i * 0.1 }} className="p-6 rounded-xl bg-muted/30 border border-border/30">
+                            <p className="font-semibold mb-4 flex items-center gap-2">
+                              <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center"><span className="text-primary text-sm font-bold">{String.fromCharCode(65 + i)}</span></span>
+                              {pm.type || `Método ${i + 1}`}
+                            </p>
+                            <div className="space-y-2 text-sm text-muted-foreground">
+                              {pm.name && <p><span className="font-medium text-foreground">{pm.name}</span></p>}
+                              {pm.bank && <p>{pm.bank}{pm.accountType ? ` - ${pm.accountType}` : ""}</p>}
+                              {pm.accountNumber && <p>Cuenta: {pm.accountNumber}</p>}
+                              {pm.ruc && <p>{pm.ruc}</p>}
+                              {pm.email && <p>{pm.email}</p>}
+                              {pm.phone && <p>Tel: {pm.phone}</p>}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ) : (
+             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+               <Card className="border-green-500/30 bg-gradient-to-br from-green-500/5 via-card to-accent/5 overflow-hidden relative shadow-2xl shadow-green-500/10">
+                 <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/10 rounded-full blur-3xl opacity-50" />
+                 
+                 <CardContent className="p-6 md:p-12 relative text-left">
+                   <div className="flex items-center gap-3 text-green-500 font-bold bg-green-500/10 px-6 py-3 rounded-full border border-green-500/20 w-fit mb-8">
+                      <CheckCircle2 className="w-5 h-5" /> Contrato Digital Activo
+                   </div>
+
+                   {/* Contract Content */}
+                   {quote.contract && (
+                     <div className="space-y-6 text-foreground/80 leading-relaxed font-serif bg-muted/20 p-8 rounded-xl border border-border/50">
+                       <h2 className="text-2xl font-sans font-bold text-foreground mb-4 border-b border-border/50 pb-4">
+                         Acuerdo de Servicios Profesionales
+                       </h2>
+                       
+                       {(() => {
+                         try {
+                           const c = JSON.parse(quote.contract.content);
+                           return c.legalTerms.split('\n\n').map((paragraph: string, idx: number) => (
+                             <p key={idx} className="whitespace-pre-wrap">{paragraph}</p>
+                           ));
+                         } catch {
+                           return <p>{quote.contract.content}</p>;
+                         }
+                       })()}
+
+                       <div className="mt-8 pt-6 border-t border-border/50 space-y-2">
+                         <p className="font-bold font-sans">Firma Criptográfica Confidencial:</p>
+                         <p className="font-mono text-sm break-all text-muted-foreground">{quote.contract.signature}</p>
+                         <p className="text-sm font-sans text-muted-foreground">Firmado el: {new Date(quote.contract.signedAt).toLocaleString("es-EC")}</p>
+                       </div>
+
+                       {/* Extensions Render */}
+                       {quote.contract.metadata && JSON.parse(quote.contract.metadata).length > 0 && (
+                         <div className="mt-8 pt-8 border-t-2 border-dashed border-primary/30">
+                           <h3 className="font-sans font-bold text-primary mb-4 flex items-center gap-2"><PenLine className="w-5 h-5" /> Adendas y Extensiones Aprobadas</h3>
+                           <div className="space-y-4 font-sans">
+                             {JSON.parse(quote.contract.metadata).map((ext: any, idx: number) => (
+                               <div key={idx} className="bg-primary/5 border border-primary/20 p-4 rounded-lg relative overflow-hidden">
+                                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+                                  <p className="text-sm text-foreground">{ext.text}</p>
+                                  <p className="text-xs text-muted-foreground mt-2 text-right">{new Date(ext.date).toLocaleString("es-EC")}</p>
+                               </div>
+                             ))}
+                           </div>
+                         </div>
+                       )}
+
+                       {/* Modification Request Input */}
+                       {showExtensionInput && (
+                         <div className="mt-8 p-6 bg-background rounded-xl border border-primary/30 font-sans">
+                           <h4 className="font-bold mb-3">{currentUser?.id === quote.user.profile?.userId ? "Añadir Cláusula Extensiva" : "Solicitar Modificación del Contrato"}</h4>
+                           <textarea className="w-full bg-muted p-4 rounded-lg outline-none min-h-[100px] resize-y border border-border focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Escribe el texto detallado..." value={extensionText} onChange={(e) => setExtensionText(e.target.value)} />
+                           <div className="flex justify-end gap-3 mt-4">
+                              <Button variant="ghost" onClick={() => setShowExtensionInput(false)}>Cancelar</Button>
+                              <Button className="btn-primary" disabled={isSubmittingExtension} onClick={handleExtension}>
+                                {isSubmittingExtension ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirmar"}
+                              </Button>
+                           </div>
+                         </div>
+                       )}
+                     </div>
+                   )}
+
+                   {/* Post-Contract Action Hub */}
+                   <div className="mt-10 border-t border-border/50 pt-10 font-sans flex flex-col md:flex-row items-center justify-between gap-6">
+                      <div className="flex items-center gap-3">
+                        <Button variant="outline" className="h-12 px-6 rounded-xl font-semibold border-primary/30 hover:bg-primary/10" onClick={() => {
+                           if (!currentUser) return window.location.href = "/auth/login"; // Client must auth
+                           setShowExtensionInput(!showExtensionInput);
+                        }}>
+                           {currentUser?.id === quote.user.profile?.userId ? "Extender Contrato" : "Solicitar Cambio"}
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center gap-3 w-full md:w-auto">
+                        {quote.paymentLink && (
+                          <a href={quote.paymentLink} target="_blank" rel="noopener noreferrer" className="w-full md:w-auto">
+                            <Button className="w-full md:w-auto h-14 px-8 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-lg shadow-lg shadow-green-500/20 rounded-xl transition-all hover:scale-105" onClick={() => {
+                                 if (!quote.paymentLink) toast.info("Link de pago pendiente de asignación");
+                             }}>
+                               <DollarSign className="w-5 h-5 mr-2" /> Realizar Pago
+                            </Button>
+                          </a>
+                        )}
+
+                        <div className="relative w-full md:w-auto">
+                          <input type="file" id="capture-upload" accept="image/*" className="hidden" onChange={handleCaptureUpload} disabled={isUploadingCapture} />
+                          <label htmlFor="capture-upload" className="block w-full">
+                            <Button asChild variant="outline" className="w-full h-14 px-8 border-primary text-primary hover:bg-primary hover:text-white font-bold text-lg rounded-xl transition-all cursor-pointer">
+                              <div>
+                                {isUploadingCapture ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <ImageIcon className="w-5 h-5 mr-2" />}
+                                Enviar Capture
+                              </div>
+                            </Button>
+                          </label>
+                        </div>
+                      </div>
+                   </div>
+
+                   {/* Payment Captures & Modification Threads */}
+                   {quote.messages && quote.messages.length > 0 && (
+                     <div className="mt-12 space-y-6">
+                       <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
+                         <MessageCircle className="w-5 h-5 text-primary" /> Hilo de Registro Inmutable
+                       </h3>
+                       {quote.messages.map((msg: any) => (
+                         <div key={msg.id} className="p-5 rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm">
+                           <div className="flex justify-between items-center mb-3">
+                              <Badge variant={msg.type === "PAYMENT_CAPTURE" ? "success" : msg.type.includes("MODIFICATION") ? "warning" : "secondary"}>
+                                {msg.type === "PAYMENT_CAPTURE" ? "Comprobante de Pago Subido" : msg.type === "MODIFICATION_REQUEST" ? "Solicitud de Cliente" : msg.type === "MODIFICATION_APPROVED" ? "Solicitud Aprobada" : msg.type}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">{new Date(msg.createdAt).toLocaleString("es-EC")}</span>
+                           </div>
+                           
+                           <p className="text-foreground">{msg.text}</p>
+                           
+                           {msg.imageUrl && (
+                             <div className="mt-4 rounded-xl overflow-hidden border border-border max-w-sm cursor-zoom-in hover:brightness-110 transition-all">
+                               <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer">
+                                  <img src={msg.imageUrl} alt="Captura de Pago" className="w-full h-auto object-cover" />
+                               </a>
+                             </div>
+                           )}
+
+                           {msg.type === "MODIFICATION_REQUEST" && currentUser?.id === quote.user.profile?.userId && (
+                              <Button className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 rounded-lg font-bold shadow-md shadow-primary/20" onClick={() => handleApproveModification(msg.id)}>
+                                <CheckCircle2 className="w-4 h-4 mr-2" /> Aprobar e Instaurar en Contrato
+                              </Button>
+                           )}
+                         </div>
+                       ))}
+                     </div>
+                   )}
+                 </CardContent>
+               </Card>
+             </motion.div>
+            )}
           </div>
         </section>
       )}
@@ -888,9 +1029,14 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
               <Logo size="md" />
             </Link>
           </motion.div>
-          <p className="text-sm text-muted-foreground mt-4">
-            © {new Date().getFullYear()} {quote.companyName}. Todos los derechos reservados.
-          </p>
+          <div className="flex flex-col items-center justify-center mt-4 gap-2">
+            <p className="text-sm text-muted-foreground">
+              © {new Date().getFullYear()} {quote.companyName}. Todos los derechos reservados.
+            </p>
+            <Link href="/legal" target="_blank" className="text-muted-foreground/40 hover:text-primary transition-colors text-xs font-medium">
+              Acuerdos Legales, Privacidad y Cookies
+            </Link>
+          </div>
           {quote.user.plan === "FREE" && quote.user.role !== "admin" && (
             <p className="text-xs text-muted-foreground/60 mt-2 font-medium">
               Powered by <a href="https://quote.eventosprimeai.com" target="_blank" rel="noopener noreferrer" className="text-neon-cyan hover:underline">Prime Quote</a>
