@@ -69,9 +69,10 @@ export default function HistorialPage() {
     try {
       const response = await fetch("/api/quotes");
       const data = await response.json();
-      setQuotes(data);
+      setQuotes(data.quotes || []);
     } catch (error) {
       console.error(error);
+      setQuotes([]);
     } finally {
       setIsLoading(false);
     }

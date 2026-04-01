@@ -11,14 +11,14 @@ async function main() {
   const hash = hashPassword('Prime2025');
   
   const user = await db.user.upsert({
-    where: { email: 'gabriel@eventosprime.com' },
+    where: { email: 'ventas@eventosprimeai.com' },
     update: { 
       password: hash,
       role: 'admin',
       plan: 'AGENCY'
     },
     create: {
-      email: 'gabriel@eventosprime.com',
+      email: 'ventas@eventosprimeai.com',
       name: 'Gabriel (Admin)',
       password: hash,
       role: 'admin',

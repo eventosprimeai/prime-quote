@@ -20,7 +20,9 @@ export function middleware(request: NextRequest) {
   if (
     publicPaths.includes(pathname) ||
     pathname.startsWith('/cotizacion/') ||
-    pathname.startsWith('/api/quotes/') && request.method === 'GET' ||
+    (pathname.startsWith('/api/quotes/') && request.method === 'GET') ||
+    pathname.match(/^\/api\/quotes\/[^\/]+\/chat$/) ||
+    pathname.match(/^\/api\/quotes\/[^\/]+\/approve$/) ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/uploads') ||
     pathname.endsWith('.svg') ||

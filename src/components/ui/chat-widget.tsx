@@ -5,8 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, MessageCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { getSession } from "@/lib/auth";
 
 interface QuoteMessage {
   id: string;
@@ -24,9 +22,18 @@ export function ChatWidget({ token }: ChatProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [myRole, setMyRole] = useState<"ADMIN" | "CLIENT">("CLIENT");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Check if the current user is an admin
+    fetch("/api/auth/me")
+      .then((res) => {
+        if (res.ok) setMyRole("ADMIN");
+        else setMyRole("CLIENT");
+      })
+      .catch(() => setMyRole("CLIENT"));
+
     fetchMessages();
     const interval = setInterval(fetchMessages, 10000); // Poll every 10s
     return () => clearInterval(interval);
@@ -62,7 +69,7 @@ export function ChatWidget({ token }: ChatProps) {
     const tempId = Date.now().toString();
     setMessages(prev => [...prev, {
       id: tempId,
-      sender: "CLIENT",
+      sender: myRole,
       text,
       createdAt: new Date().toISOString()
     }]);
@@ -71,7 +78,7 @@ export function ChatWidget({ token }: ChatProps) {
       const res = await fetch(`/api/quotes/${token}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, sender: "CLIENT" })
+        body: JSON.stringify({ text, sender: myRole })
       });
       
       if (!res.ok) throw new Error("Failed to send");
@@ -100,8 +107,11 @@ export function ChatWidget({ token }: ChatProps) {
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            className="fixed bottom-6 right-6 z-50"
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-3"
           >
+            <span className="bg-white/90 dark:bg-black/90 text-black dark:text-white px-3 py-1.5 rounded-full shadow-lg text-sm font-medium border border-border/50 hidden sm:block">
+              Chat
+            </span>
             <Button
               size="lg"
               className="w-16 h-16 rounded-full shadow-2xl bg-gradient-to-r from-primary to-accent hover:shadow-primary/50"
@@ -146,25 +156,28 @@ export function ChatWidget({ token }: ChatProps) {
                   <p className="text-sm">¿Tienes alguna duda sobre la cotización?</p>
                 </div>
               ) : (
-                messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col max-w-[85%] ${msg.sender === "CLIENT" ? "ml-auto items-end" : "mr-auto items-start"}`}
-                  >
+                messages.map((msg) => {
+                  const isMine = msg.sender === myRole;
+                  return (
                     <div
-                      className={`px-4 py-2 rounded-2xl text-sm ${
-                        msg.sender === "CLIENT"
-                          ? "bg-primary text-primary-foreground rounded-br-sm"
-                          : "bg-muted rounded-bl-sm"
-                      }`}
+                      key={msg.id}
+                      className={`flex flex-col max-w-[85%] ${isMine ? "ml-auto items-end" : "mr-auto items-start"}`}
                     >
-                      {msg.text}
+                      <div
+                        className={`px-4 py-2 rounded-2xl text-sm ${
+                          isMine
+                            ? "bg-primary text-primary-foreground rounded-br-sm"
+                            : "bg-muted rounded-bl-sm"
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground mt-1 mx-1">
+                        {formatTime(msg.createdAt)}
+                      </span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground mt-1 mx-1">
-                      {formatTime(msg.createdAt)}
-                    </span>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 
