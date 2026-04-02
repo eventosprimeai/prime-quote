@@ -14,6 +14,7 @@ export function middleware(request: NextRequest) {
     '/api/auth/logout',
     '/api/auth/me',
     '/api/init',
+    '/admin/actualizaciones'
   ];
 
   // Public patterns

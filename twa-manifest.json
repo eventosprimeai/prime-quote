@@ -1,0 +1,34 @@
+{
+  "packageId": "com.eventosprimeai.primequote",
+  "host": "quote.eventosprimeai.com",
+  "name": "Prime Quote",
+  "launcherName": "Prime Quote",
+  "display": "standalone",
+  "themeColor": "#0a0a1a",
+  "backgroundColor": "#0a0a1a",
+  "startUrl": "/admin/dashboard",
+  "iconUrl": "public/icon-512.png",
+  "maskableIconUrl": "public/icon-512.png",
+  "features": {
+    "playBilling": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": true
+  },
+  "enableNotifications": true,
+  "shortcuts": [
+    {
+      "name": "Nueva Cotización",
+      "shortName": "Nueva",
+      "url": "/admin/nueva",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

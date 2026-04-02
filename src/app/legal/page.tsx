@@ -81,6 +81,30 @@ export default function LegalPage() {
                   EPRAI EVENTOS PRIME AI S.A.S. se reserva el estricto derecho de suspensión inmediata a cuentas que sean detectadas emitiendo contenido que inflija normativas financieras o promueva extorsiones a través del módulo de cotización, así como aquellas cuentas en planes "Free" (Gratuitos) que intenten evadir bloqueos de marca blanca del sistema engañando las medidas de seguridad del servidor.
                 </p>
               </div>
+
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold font-sans text-primary border-b border-border/50 pb-2">4. Suscripciones y Facturación (Ecosistema Prime)</h2>
+                <p className="text-muted-foreground leading-relaxed">
+                  Prime Quote ofrece planes de suscripción (Free, Starter, Pro, Suite) que habilitan funcionalidades progresivas, incluyendo acceso compartido con las otras 21 apps del ecosistema <strong>Eventos Prime</strong> para los planes más altos. 
+                  </p>
+                   <ul className="list-disc pl-5 space-y-2 text-sm text-foreground/80 mt-2">
+                    <li>La facturación puede procesarse nativamente a través de la <strong>Google Play Store</strong> (para usuarios de la aplicación PWA/TWA Android) o de manera directa vía nuestro procesador de pagos.</li>
+                    <li>Las suscripciones se renuevan automáticamente al final de cada ciclo (mensual o anual) salvo que el usuario las cancele al menos 24 horas antes desde su panel de control o desde la Play Store.</li>
+                  </ul>
+              </div>
+
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold font-sans text-primary border-b border-border/50 pb-2">5. Política de Reembolsos y Jurisdicción</h2>
+                <div className="bg-primary/5 p-5 rounded-xl border border-primary/20">
+                  <h4 className="font-bold mb-2 flex items-center text-foreground"><Scale className="w-4 h-4 mr-2 text-primary" />Manejo de Reembolsos</h4>
+                  <p className="text-sm text-foreground/80">
+                    Las compras procesadas mediante la <strong>Google Play Store</strong> están completamente sujetas a las Políticas de Reembolso de Google. Prime Quote carece de autoridad para forzar reembolsos si Google Play determina que la compra es final.
+                  </p>
+                </div>
+                <p className="text-muted-foreground leading-relaxed mt-4">
+                  En casos de disputas irresolutas con contrataciones directas corporativas, ambas partes acuerdan someterse a las leyes de la <strong>República del Ecuador</strong>, renunciando al fuero de sus domicilios, para litigar en los tribunales competentes de la ciudad de Guayaquil.
+                </p>
+              </div>
             </TabsContent>
 
             <TabsContent value="privacidad" className="relative z-10 m-0 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
@@ -109,9 +133,16 @@ export default function LegalPage() {
               </div>
 
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-primary border-b border-border/50 pb-2">3. Compartición con Terceros</h2>
+                <h2 className="text-2xl font-bold text-primary border-b border-border/50 pb-2">3. Compartición con Terceros y Facturación</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  Nunca venderemos su información, su listado de clientes ni los precios de sus proyectos a terceros. La metadata interna de un contrato está encriptada lógicamente y es puramente accesible mediante el <code>Token</code> único generado para que usted y su cliente puedan auditarlo en todo momento a través del protocolo HTTPS oficial.
+                  Nunca venderemos su información, su listado de clientes ni los precios de sus proyectos a terceros. La metadata interna de un contrato está encriptada lógicamente. Sin embargo, para procesar los planes PRO y SUITE, transferimos los identificadores estrictamente necesarios a <strong>Google (Google Play Billing API)</strong> o a nuestro Gateway de pagos encriptado para verificar la validez de sus tokens de suscripción mensualmente y notificarle mediante el <strong>Event Bus</strong> del ecosistema.
+                </p>
+              </div>
+
+               <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-primary border-b border-border/50 pb-2">4. Derecho al Olvido y Eliminación Integral</h2>
+                <p className="text-muted-foreground leading-relaxed">
+                  En cumplimiento con el GDPR europeo, la LOPDP Ecuatoriana y las políticas de la Play Store, los profesionales tienen absoluto derecho a solicitar la purga definitiva de su cuenta. Tras pulsar "Eliminar mi cuenta" en los ajustes de Perfil, entrará en un <strong>periodo de gracia de aislamiento por 30 días</strong>; tras esto, todo el contenido subido, listas de clientes y cotizaciones no firmadas, se eliminarán permanentemente de <strong>Supabase Central</strong> e infraestructuras asociadas.
                 </p>
               </div>
             </TabsContent>
@@ -151,7 +182,14 @@ export default function LegalPage() {
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold text-primary border-b border-border/50 pb-2">3. Retiro del Consentimiento</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  Como mandatan las normativas internacionales, posees el derecho inalienable de borrar tus cookies utilizando los ajustes de almacenamiento en caché de tu navegador. Considera que si purgas las cookies catalogadas como 'Estrictamente Esenciales', tu sesión activa cerrará inmediatamente y deberás recertificarte.
+                  Como mandatan las normativas internacionales, posees el derecho inalienable de borrar tus cookies utilizando los ajustes de almacenamiento en caché de tu navegador. Considera que si purgas las cookies catalogadas como 'Estrictamente Esenciales', tu sesión activa cerrará inmediatamente y deberás recertificarte de forma criptográfica con nuestro servidor.
+                </p>
+              </div>
+
+              <div className="space-y-4 mt-8">
+                <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest text-center border-t border-border/30 pt-4">Integración Ecosistema</h2>
+                <p className="text-xs text-center text-muted-foreground/60 leading-relaxed max-w-xl mx-auto">
+                  La navegación mediante Prime Quote se comunica transversalmente con el Event Bus de <strong>Eventos Prime AI</strong> bajo el proxy corporativo interno. Al aceptar esta política, usted consiente la portabilidad de sus <em>Session Tokens</em> hacia las otras sub-apps del ecosistema (como Prime Ranking o Prime Flow) si posee un plan compatible.
                 </p>
               </div>
             </TabsContent>

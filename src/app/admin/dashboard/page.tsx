@@ -19,7 +19,8 @@ import {
   UserCircle,
   LogOut,
   Sparkles,
-  MessageCircle
+  MessageCircle,
+  Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -177,6 +178,12 @@ export default function DashboardPage() {
                   Historial
                 </Button>
               </Link>
+              <Link href="/admin/actualizaciones">
+                <Button variant="ghost" size="sm" className="relative">
+                  <Bell className="w-4 h-4 mr-1.5" />
+                  Novedades
+                </Button>
+              </Link>
               <Link href="/admin/nueva">
                 <Button variant="default" size="sm">
                   <Plus className="w-4 h-4 mr-1.5" />
@@ -218,6 +225,12 @@ export default function DashboardPage() {
                     <Button variant="ghost" className="w-full justify-start">
                       <History className="w-4 h-4 mr-2" />
                       Historial
+                    </Button>
+                  </Link>
+                  <Link href="/admin/actualizaciones" className="block">
+                    <Button variant="ghost" className="w-full justify-start relative">
+                      <Bell className="w-4 h-4 mr-2" />
+                      Novedades
                     </Button>
                   </Link>
                   <Link href="/admin/nueva" className="block">
@@ -282,9 +295,9 @@ export default function DashboardPage() {
                 </div>
                 <Button 
                   className="btn-primary whitespace-nowrap relative z-10 w-full sm:w-auto"
-                  onClick={() => window.open('https://wa.me/593999999999?text=Hola,%20quiero%20actualizar%20mi%20cuenta%20de%20Prime%20Quote%20a%20PRO', '_blank')}
+                  onClick={() => window.open('https://wa.me/593999999999?text=Hola,%20quiero%20actualizar%20mi%20cuenta%20de%20Prime%20Quote%20a%20STARTER', '_blank')}
                 >
-                  Actualizar a PRO ($5/mes)
+                  Actualizar a Starter ($9/mes)
                 </Button>
                 {/* Background glow decoration */}
                 <div className="absolute right-0 top-0 w-32 h-32 bg-neon-cyan/10 blur-3xl pointer-events-none rounded-full translate-x-1/2 -translate-y-1/2" />

@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
 import CookiesBanner from "@/components/cookies-banner";
+import PwaRegister from "@/components/pwa-register";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -18,7 +19,9 @@ export const metadata: Metadata = {
   authors: [{ name: "Eventos Prime Tecnología" }],
   icons: {
     icon: "/logo.svg",
+    apple: "/apple-touch-icon.png",
   },
+  themeColor: "#0a0a1a",
 };
 
 export default function RootLayout({
@@ -31,6 +34,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} font-sans antialiased bg-background text-foreground`}
       >
+        <PwaRegister />
         {children}
         <Toaster richColors position="top-right" />
         <CookiesBanner />

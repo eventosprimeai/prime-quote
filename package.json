@@ -1,11 +1,11 @@
 {
-  "name": "nextjs_tailwind_shadcn_ts",
+  "name": "prime-quote",
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
-    "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
+    "dev": "next dev -p 3002 2>&1 | tee dev.log",
+    "build": "next build && node -e \"require('fs').cpSync('.next/static', '.next/standalone/.next/static', {recursive:true}); require('fs').cpSync('public', '.next/standalone/public', {recursive:true});\"",
+    "start": "NODE_ENV=production bun .next/standalone/server.js -p 3002 2>&1 | tee server.log",
     "lint": "eslint .",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
@@ -49,6 +49,7 @@
     "@reactuses/core": "^6.0.5",
     "@tanstack/react-query": "^5.82.0",
     "@tanstack/react-table": "^8.21.3",
+    "@types/web-push": "^3.6.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -78,6 +79,7 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0",
     "vaul": "^1.1.2",
+    "web-push": "^3.6.7",
     "z-ai-web-dev-sdk": "^0.0.17",
     "zod": "^4.0.2",
     "zustand": "^5.0.6"
