@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  prime-quote:
+    build: .
+    image: eventosprime/prime-quote:latest
+    container_name: prime-quote-prod
+    restart: always
+    ports:
+      - "3002:3002"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    networks:
+      - prime-network
+
+networks:
+  prime-network:
+    external: true

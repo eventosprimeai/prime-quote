@@ -20,11 +20,16 @@ import {
   LogOut,
   Sparkles,
   MessageCircle,
-  Bell
+  Bell,
+  Download,
+  Upload,
+  Pencil,
+  Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Logo } from "@/components/ui/logo";
+import { toast } from "sonner";
 
 interface Quote {
   id: string;
@@ -49,11 +54,13 @@ export default function DashboardPage() {
   });
   const [usage, setUsage] = useState({
     plan: "FREE",
+    role: "user",
     count: 0,
     limit: 10
   });
   const [unreadMap, setUnreadMap] = useState<Record<string, { count: number }>>({});
   const [totalUnread, setTotalUnread] = useState(0);
+  const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
     fetchQuotes();
@@ -136,6 +143,52 @@ export default function DashboardPage() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount);
+  };
+
+  const handleDownloadQuote = async (e: React.MouseEvent, token: string, companyName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const res = await fetch(`/api/quotes/${token}/export`);
+      if (!res.ok) throw new Error('Export failed');
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cotizacion-${companyName.replace(/[^a-zA-Z0-9]/g, '_')}-${token}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Cotización descargada como JSON');
+    } catch {
+      toast.error('Error al descargar la cotización');
+    }
+  };
+
+  const handleImportQuote = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const res = await fetch('/api/quotes/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Import failed');
+      toast.success(`Cotización importada: ${result.token}`);
+      fetchQuotes();
+    } catch (err: any) {
+      toast.error(err.message || 'Error al importar');
+    } finally {
+      setIsImporting(false);
+      e.target.value = '';
+    }
   };
 
   const statCards = [
@@ -265,7 +318,7 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* Usage Limits (if FREE) */}
-        {usage.plan === "FREE" && (
+        {usage.plan === "FREE" && usage.role !== "admin" && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -383,6 +436,33 @@ export default function DashboardPage() {
               </Card>
             </motion.div>
           </Link>
+
+          {/* Import Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.18 }}
+          >
+            <label htmlFor="import-file">
+              <Card className="card-elevated cursor-pointer group overflow-hidden">
+                <CardContent className="p-4 sm:p-5 sm:p-6">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shrink-0">
+                      {isImporting ? <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-white animate-spin" /> : <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm sm:text-base">Importar Cotización</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                        Restaurar desde archivo JSON
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+                  </div>
+                </CardContent>
+              </Card>
+            </label>
+            <input id="import-file" type="file" accept=".json" onChange={handleImportQuote} className="hidden" />
+          </motion.div>
         </div>
 
         {/* Recent Quotes */}
@@ -468,6 +548,38 @@ export default function DashboardPage() {
                                 </span>
                               </div>
                             )}
+                            {/* Edit/Lock button */}
+                            {quote.status !== 'accepted' ? (
+                              <Link href={`/admin/editar/${quote.token}`} onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center bg-muted/50 hover:bg-primary/10 transition-colors"
+                                  title="Editar Cotización"
+                                >
+                                  <Pencil className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-muted-foreground hover:text-primary" />
+                                </button>
+                              </Link>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  toast.info('La edición está bloqueada por seguridad. Puedes usar la función de extensión en el enlace activo.');
+                                }}
+                                className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center bg-muted/30 cursor-not-allowed"
+                                title="Edición bloqueada (Contrato Firmado)"
+                              >
+                                <Lock className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-muted-foreground/50" />
+                              </button>
+                            )}
+
+                            {/* Download button */}
+                            <button
+                              onClick={(e) => handleDownloadQuote(e, quote.token, quote.companyName)}
+                              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center bg-muted/50 hover:bg-muted/80 transition-colors"
+                              title="Descargar Respaldo JSON"
+                            >
+                              <Download className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-muted-foreground hover:text-foreground" />
+                            </button>
                             <span className="text-sm sm:text-base font-semibold text-gradient hidden sm:block">
                               {formatCurrency(quote.projectPrice)}
                             </span>
@@ -475,6 +587,15 @@ export default function DashboardPage() {
                             <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                           </div>
                         </div>
+                        {/* Subtle text for accepted quotes */}
+                        {quote.status === 'accepted' && (
+                          <div className="mt-3 py-2 px-3 rounded-md bg-accent/5 border border-accent/10 flex items-start gap-2">
+                            <Lock className="w-3.5 h-3.5 text-accent/70 mt-0.5 shrink-0" />
+                            <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">
+                              Por políticas antifraude, esta cotización es inmutable tras su firma digital. Tu cliente o tú pueden solicitar o añadir nuevos servicios en la pestaña <span className="font-semibold text-accent/80">Ampliar Contrato</span> directamente en el enlace de la cotización.
+                            </p>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   </Link>

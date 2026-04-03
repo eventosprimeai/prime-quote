@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { db } from '@/lib/db';
 
 /**
  * POST /api/billing/webhook
@@ -37,7 +35,7 @@ export async function POST(request: NextRequest) {
       // 13: SUBSCRIPTION_EXPIRED
 
       // Find user with this purchase token
-      const subscription = await prisma.subscription.findFirst({
+      const subscription = await db.subscription.findFirst({
         where: { purchaseToken },
       });
 
@@ -52,21 +50,21 @@ export async function POST(request: NextRequest) {
         case 1: // RECOVERED
           // Increase expiration date (requires fetching actual new date from Google Play API)
           // For now, simple assumption logic (needs real API in prod)
-          await prisma.subscription.update({
+          await db.subscription.update({
             where: { id: subscription.id },
             data: { status: 'active', cancelledAt: null },
           });
           break;
           
         case 3: // CANCELED (still active until expiration)
-          await prisma.subscription.update({
+          await db.subscription.update({
             where: { id: subscription.id },
             data: { cancelledAt: new Date() },
           });
           break;
 
         case 5: // ON_HOLD
-          await prisma.subscription.update({
+          await db.subscription.update({
             where: { id: subscription.id },
             data: { status: 'paused' },
           });
@@ -74,13 +72,13 @@ export async function POST(request: NextRequest) {
 
         case 12: // REVOKED
         case 13: // EXPIRED
-          await prisma.subscription.update({
+          await db.subscription.update({
             where: { id: subscription.id },
             data: { status: 'expired' },
           });
           
           // Downgrade user to FREE
-          await prisma.user.update({
+          await db.user.update({
              where: { id: subscription.userId },
              data: { plan: 'FREE' }
           });

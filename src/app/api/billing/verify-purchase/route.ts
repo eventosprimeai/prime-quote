@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { db } from '@/lib/db';
 import { productIdToPlan } from '@/lib/billing-client';
-
-const prisma = new PrismaClient();
 
 /**
  * POST /api/billing/verify-purchase
@@ -29,7 +27,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const session = await prisma.session.findUnique({
+    const session = await db.session.findUnique({
       where: { token: sessionToken },
       include: { user: true },
     });
@@ -59,7 +57,7 @@ export async function POST(request: NextRequest) {
     // });
 
     // Upsert subscription
-    await prisma.subscription.upsert({
+    await db.subscription.upsert({
       where: { userId },
       create: {
         userId,
@@ -84,7 +82,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Update user's plan field
-    await prisma.user.update({
+    await db.user.update({
       where: { id: userId },
       data: { plan },
     });

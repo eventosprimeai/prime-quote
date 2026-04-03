@@ -3,25 +3,31 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["primequote"]
 }
 
 model User {
-  id                 String           @id @default(cuid())
-  email              String           @unique
+  id                 String             @id @default(cuid())
+  email              String             @unique
   password           String
   name               String
-  role               String           @default("user")
-  plan               String           @default("FREE")
-  quotesCreatedCount Int              @default(0)
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  role               String             @default("user")
+  plan               String             @default("FREE")
+  quotesCreatedCount Int                @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
   sessions           Session[]
   quotes             Quote[]
   profile            BusinessProfile?
   subscription       Subscription?
   pushSubscriptions  PushSubscription[]
+  sectionTemplates   UserSectionTemplate[]
+  quotePackages      UserQuotePackage[]
+
+  @@schema("primequote")
 }
 
 model Session {
@@ -31,6 +37,8 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@schema("primequote")
 }
 
 model BusinessProfile {
@@ -48,6 +56,8 @@ model BusinessProfile {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@schema("primequote")
 }
 
 model Template {
@@ -59,6 +69,8 @@ model Template {
   updatedAt   DateTime          @updatedAt
   quotes      Quote[]
   sections    TemplateSection[]
+
+  @@schema("primequote")
 }
 
 model TemplateSection {
@@ -75,37 +87,43 @@ model TemplateSection {
   updatedAt    DateTime           @updatedAt
   sectionItems QuoteSectionItem[]
   template     Template           @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@schema("primequote")
 }
 
 model Quote {
-  id             String             @id @default(cuid())
-  token          String             @unique
-  templateId     String
-  userId         String
-  companyName    String
-  contactName    String?
-  email          String?
-  phone          String?
-  projectName    String?
-  internalNotes  String?
-  projectPrice   Float?
-  quoteType      String             @default("FIXED") // "FIXED" | "PERCENTAGE"
+  id              String             @id @default(cuid())
+  token           String             @unique
+  templateId      String
+  userId          String
+  companyName     String
+  contactName     String?
+  email           String?
+  phone           String?
+  projectName     String?
+  internalNotes   String?
+  projectPrice    Float?
+  quoteType       String             @default("FIXED")
   percentageValue Float?
-  currency       String             @default("USD")
-  status         String             @default("draft")
-  paymentLink    String?
-  logoUrl        String?
-  validUntil     DateTime?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  template       Template           @relation(fields: [templateId], references: [id])
-  user           User               @relation(fields: [userId], references: [id])
-  sections       QuoteSectionItem[]
-  customSections CustomSection[]
-  images         QuoteImage[]
-  messages       QuoteMessage[]
-  contract       Contract?
-  payments       Payment[]
+  currency        String             @default("USD")
+  status          String             @default("draft")
+  paymentLink     String?
+  logoUrl         String?
+  themeColor      String?            @default("default")
+  validUntil      DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  template        Template           @relation(fields: [templateId], references: [id])
+  user            User               @relation(fields: [userId], references: [id])
+  sections        QuoteSectionItem[]
+  customSections  CustomSection[]
+  images          QuoteImage[]
+  messages        QuoteMessage[]
+  contract        Contract?
+  payments        Payment[]
+  optionalSelections QuoteOptionalSelection[]
+
+  @@schema("primequote")
 }
 
 model QuoteSectionItem {
@@ -120,6 +138,8 @@ model QuoteSectionItem {
   updatedAt         DateTime        @updatedAt
   templateSection   TemplateSection @relation(fields: [templateSectionId], references: [id])
   quote             Quote           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@schema("primequote")
 }
 
 model CustomSection {
@@ -130,6 +150,24 @@ model CustomSection {
   imageUrl String?
   order    Int     @default(0)
   quote    Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  optionalSelections QuoteOptionalSelection[]
+
+  @@schema("primequote")
+}
+
+model QuoteOptionalSelection {
+  id              String        @id @default(cuid())
+  quoteId         String
+  customSectionId String
+  enabled         Boolean       @default(false)
+  lockedAt        DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  quote           Quote         @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  customSection   CustomSection @relation(fields: [customSectionId], references: [id], onDelete: Cascade)
+
+  @@unique([quoteId, customSectionId])
+  @@schema("primequote")
 }
 
 model QuoteImage {
@@ -141,6 +179,8 @@ model QuoteImage {
   createdAt DateTime  @default(now())
   expiresAt DateTime?
   quote     Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@schema("primequote")
 }
 
 model Branding {
@@ -151,30 +191,36 @@ model Branding {
   accentColor  String   @default("#0f3460")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@schema("primequote")
 }
 
 model QuoteMessage {
   id        String   @id @default(cuid())
   quoteId   String
-  sender    String   // "ADMIN" or "CLIENT"
-  type      String   @default("MESSAGE") // "MESSAGE" | "MODIFICATION_REQUEST" | "PAYMENT_CAPTURE"
+  sender    String
+  type      String   @default("MESSAGE")
   text      String
   imageUrl  String?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
   quote     Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@schema("primequote")
 }
 
 model Contract {
-  id          String    @id @default(cuid())
-  quoteId     String    @unique
-  content     String
-  metadata    String?   // JSON array of contract extensions
-  signature   String?
-  signedAt    DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  quote       Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  quoteId   String    @unique
+  content   String
+  metadata  String?
+  signature String?
+  signedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  quote     Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@schema("primequote")
 }
 
 model Payment {
@@ -188,38 +234,95 @@ model Payment {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   quote         Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@schema("primequote")
 }
 
 model Subscription {
-  id                 String    @id @default(cuid())
-  userId             String    @unique
-  plan               String    @default("FREE")
-  billingPeriod      String?   // MONTHLY, ANNUAL
-  status             String    @default("active") // active, cancelled, expired, paused
-  provider           String?   // GOOGLE_PLAY, WEB, MANUAL
-  purchaseToken      String?
-  productId          String?
-  expiresAt          DateTime?
-  cancelledAt        DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  plan          String    @default("FREE")
+  billingPeriod String?
+  status        String    @default("active")
+  provider      String?
+  purchaseToken String?
+  productId     String?
+  expiresAt     DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@schema("primequote")
 }
 
 model PushSubscription {
   id        String   @id @default(cuid())
   userId    String
   endpoint  String   @unique
-  keys      String   // JSON stringified keys
+  keys      String
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@schema("primequote")
 }
 
 model AppVersion {
   id          String   @id @default(cuid())
   version     String
   title       String
-  description String   // Markdown changelog
+  description String
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
+
+  @@schema("primequote")
+}
+
+model UserSectionTemplate {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  type        String   @default("standard")
+  title       String
+  description String?
+  imageUrl    String?
+  buttonUrl   String?
+  phoneNumber String?
+  messageText String?
+  hasPrice    Boolean  @default(false)
+  price       Float?
+  hasIva      Boolean  @default(false)
+  ivaPercent  Float?   @default(15)
+  includeInTotal Boolean @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packageSections PackageSection[]
+
+  @@schema("primequote")
+}
+
+model UserQuotePackage {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sections    PackageSection[]
+
+  @@schema("primequote")
+}
+
+model PackageSection {
+  id         String   @id @default(cuid())
+  packageId  String
+  templateId String
+  order      Int      @default(0)
+  package    UserQuotePackage    @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  template   UserSectionTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@schema("primequote")
 }

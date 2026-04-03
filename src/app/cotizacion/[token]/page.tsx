@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Building2,
@@ -90,6 +91,7 @@ interface Quote {
   status: string;
   paymentLink: string | null;
   logoUrl: string | null;
+  themeColor: string | null;
   createdAt: string;
   template: {
     name: string;
@@ -121,10 +123,46 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
   const [extensionText, setExtensionText] = useState("");
   const [isSubmittingExtension, setIsSubmittingExtension] = useState(false);
 
+  // Lightbox
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  // Optional service selections
+  const [enabledOptionals, setEnabledOptionals] = useState<Record<string, boolean>>({});
+  const [optionalsLocked, setOptionalsLocked] = useState(false);
+
   useEffect(() => {
     fetchUser();
     fetchQuote();
   }, [token]);
+
+  // ─── Referral Engine ────────────────────────────────────────────
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const refCode = searchParams.get("ref");
+    if (!refCode) return;
+
+    // Notificar al API Hub silenciosamente (fire & forget)
+    const registerTouch = async () => {
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_API_HUB_URL || "http://localhost:3006"}/api/referral/touch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ref_code: refCode,
+            source_app: "primequote",
+            quote_token: token,
+            landing_url: window.location.href,
+          }),
+        });
+      } catch {
+        // Silencioso — nunca interrumpir la experiencia del cliente
+      }
+    };
+
+    registerTouch();
+  }, [searchParams, token]);
+  // ─────────────────────────────────────────────────────────────────
 
   const fetchUser = async () => {
     try {
@@ -145,10 +183,39 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
       }
       const data = await response.json();
       setQuote(data);
+      // Fetch optionals after quote loads
+      fetchOptionals();
     } catch (err) {
       setError("Error al cargar la cotización");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchOptionals = async () => {
+    try {
+      const res = await fetch(`/api/quotes/${token}/optionals`);
+      if (res.ok) {
+        const data = await res.json();
+        const map: Record<string, boolean> = {};
+        (data.selections || []).forEach((s: any) => { map[s.customSectionId] = s.enabled; });
+        setEnabledOptionals(map);
+        setOptionalsLocked(data.locked || false);
+      }
+    } catch {}
+  };
+
+  const handleToggleOptional = async (sectionId: string, enabled: boolean) => {
+    if (optionalsLocked) return;
+    setEnabledOptionals(prev => ({ ...prev, [sectionId]: enabled }));
+    try {
+      await fetch(`/api/quotes/${token}/optionals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customSectionId: sectionId, enabled }),
+      });
+    } catch {
+      setEnabledOptionals(prev => ({ ...prev, [sectionId]: !enabled }));
     }
   };
 
@@ -167,8 +234,27 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
     }).format(amount);
   };
 
+  /**
+   * Genera un hash corto del userId para el sistema de referidos.
+   * No expone el ID real — solo un hash reproducible de 12 chars.
+   */
+  const generateRefCode = (userId: string): string => {
+    // Simple hash: XOR de charCodes + base36. No requiere crypto en cliente.
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+      hash = ((hash << 5) - hash + userId.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash).toString(16).padStart(8, "0");
+  };
+
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    // Generar URL con ?ref= si el usuario logueado es el creador de la cotización
+    let shareUrl = window.location.href.split("?")[0]; // URL base sin params
+    if (currentUser?.id) {
+      const refCode = generateRefCode(currentUser.id);
+      shareUrl = `${shareUrl}?ref=${refCode}`;
+    }
+    navigator.clipboard.writeText(shareUrl);
     toast.success("Enlace copiado al portapapeles");
   };
 
@@ -517,19 +603,50 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
     }
   }
 
+  const isSuiteOrAdmin = quote.user.plan === "SUITE" || quote.user.role === "admin";
+  let isCustomTheme = false;
+  let useWhiteLabel = false;
+  let glow1 = ""; 
+  let glow2 = ""; 
+
+  if (isSuiteOrAdmin && quote.themeColor) {
+    if (quote.themeColor.startsWith("{")) {
+       try {
+         const parsed = JSON.parse(quote.themeColor);
+         if (parsed.preset === "custom") {
+           glow1 = parsed.glow1;
+           glow2 = parsed.glow2;
+           isCustomTheme = true;
+         }
+         useWhiteLabel = !!parsed.whiteLabel;
+       } catch (e) {}
+    } else if (quote.themeColor !== "default") {
+       // Backup for old quotes that used text preset
+       switch (quote.themeColor) {
+         case "ocean": glow1 = "#0ea5e9"; glow2 = "#2563eb"; isCustomTheme = true; break; 
+         case "emerald": glow1 = "#10b981"; glow2 = "#059669"; isCustomTheme = true; break; 
+         case "ruby": glow1 = "#f43f5e"; glow2 = "#e11d48"; isCustomTheme = true; break; 
+         case "amethyst": glow1 = "#d946ef"; glow2 = "#9333ea"; isCustomTheme = true; break; 
+       }
+       useWhiteLabel = true;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Animated Background */}
-      <div className="fixed inset-0 gradient-mesh pointer-events-none" />
+      <div className="fixed inset-0 gradient-mesh pointer-events-none opacity-50" />
       <motion.div
         animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
         transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-        className="fixed top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl pointer-events-none"
+        className={`fixed top-20 left-10 w-72 h-72 rounded-full blur-3xl pointer-events-none ${isCustomTheme ? 'opacity-60' : 'bg-primary/20'}`}
+        style={isCustomTheme ? { backgroundColor: glow1 } : undefined}
       />
       <motion.div
         animate={{ x: [0, -25, 0], y: [0, 25, 0] }}
         transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-        className="fixed bottom-20 right-10 w-80 h-80 bg-accent/15 rounded-full blur-3xl pointer-events-none"
+        className={`fixed bottom-20 right-10 w-80 h-80 rounded-full blur-3xl pointer-events-none ${isCustomTheme ? 'opacity-60' : 'bg-accent/15'}`}
+        style={isCustomTheme ? { backgroundColor: glow2 } : undefined}
       />
       
       {/* Header */}
@@ -537,7 +654,11 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
             <Link href="/">
-              <Logo size="md" />
+              {useWhiteLabel && quote.logoUrl ? (
+                <img src={quote.logoUrl} alt="Company Logo" className="h-10 object-contain" />
+              ) : (
+                <Logo size="md" />
+              )}
             </Link>
           </motion.div>
 
@@ -566,8 +687,7 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
             transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
             className="text-center"
           >
-            {/* Client Logo */}
-            {quote.logoUrl && (quote.user.plan !== "FREE" || quote.user.role === "admin") && (
+            {quote.logoUrl && !useWhiteLabel && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -659,139 +779,240 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
 
       {/* Sections */}
       <section className="px-6 pb-20">
-        <div className="max-w-5xl mx-auto">
-          <Accordion type="single" collapsible defaultValue={visibleSections[0]?.templateSection?.key} className="space-y-5">
-            {visibleSections.map((section, index) => {
-              const Icon = getIcon(section.templateSection.icon);
-              const sectionKey = section.templateSection?.key || `section-${index}`;
-              
-              return (
-                <motion.div
-                  key={sectionKey}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-50px" }}
-                  transition={{ delay: index * 0.08 }}
-                >
-                  <AccordionItem 
-                    value={sectionKey}
-                    className="border border-border/30 rounded-2xl bg-card/50 backdrop-blur-sm overflow-hidden data-[state=open]:bg-card/80 data-[state=open]:border-primary/30 data-[state=open]:shadow-lg data-[state=open]:shadow-primary/5 transition-all"
-                  >
-                    <AccordionTrigger className="px-7 py-6 hover:no-underline hover:bg-muted/30 transition-colors group">
-                      <div className="flex items-center gap-5">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center group-hover:from-primary/20 group-hover:to-accent/20 transition-colors group-hover:scale-110 duration-300">
-                          <Icon className="w-6 h-6 text-primary" />
-                        </div>
-                        <span className="text-xl font-semibold text-left">{section.title}</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-7 pb-7">
-                      <Separator className="mb-7 bg-border/50" />
-                      {renderContent(section.content)}
-                    </AccordionContent>
-                  </AccordionItem>
-                </motion.div>
-              );
-            })}
-
-            {/* Custom Sections */}
-            {quote.customSections.map((cs, index) => (
-              <motion.div
-                key={`custom-${cs.id}`}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ delay: (visibleSections.length + index) * 0.08 }}
-              >
-                <AccordionItem
-                  value={`custom-${cs.id}`}
-                  className="border border-border/30 rounded-2xl bg-card/50 backdrop-blur-sm overflow-hidden data-[state=open]:bg-card/80 data-[state=open]:border-accent/30 data-[state=open]:shadow-lg data-[state=open]:shadow-accent/5 transition-all"
-                >
-                  <AccordionTrigger className="px-7 py-6 hover:no-underline hover:bg-muted/30 transition-colors group">
-                    <div className="flex items-center gap-5">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent/10 to-primary/10 flex items-center justify-center group-hover:from-accent/20 group-hover:to-primary/20 transition-colors group-hover:scale-110 duration-300">
-                        <PenLine className="w-6 h-6 text-accent" />
-                      </div>
-                      <span className="text-xl font-semibold text-left">{cs.title}</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-7 pb-7">
-                    <Separator className="mb-7 bg-border/50" />
-                    <div className="space-y-5">
-                      {(() => {
-                        let parsed: any = null;
-                        try {
-                          parsed = JSON.parse(cs.content || "{}");
-                        } catch {
-                          return <p className="text-muted-foreground leading-relaxed text-lg whitespace-pre-wrap">{cs.content}</p>;
-                        }
-
-                        if (!parsed || typeof parsed !== 'object') {
-                          return <p className="text-muted-foreground leading-relaxed text-lg whitespace-pre-wrap">{cs.content}</p>;
-                        }
-
-                        return (
-                          <div className="space-y-6">
-                            {(parsed.type === "standard" || parsed.type === "title_desc_img_right" || parsed.type === "title_desc_img_left") && (
-                              <div className={`flex flex-col gap-6 ${parsed.type === "title_desc_img_right" ? "md:flex-row" : parsed.type === "title_desc_img_left" ? "md:flex-row-reverse" : ""}`}>
-                                <div className="flex-1 space-y-4">
-                                  {parsed.description && <p className="text-muted-foreground leading-relaxed text-lg whitespace-pre-wrap">{parsed.description}</p>}
-                                </div>
-                                {cs.imageUrl && (parsed.type === "title_desc_img_right" || parsed.type === "title_desc_img_left") && (
-                                  <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="w-full md:w-1/2 rounded-xl overflow-hidden border border-border/30 shadow-xl shadow-primary/5">
-                                    <img src={cs.imageUrl} alt={cs.title} className="w-full h-auto object-cover max-h-96" />
-                                  </motion.div>
-                                )}
-                              </div>
-                            )}
-
-                            {parsed.type === "title_desc_button" && (
-                              <div className="space-y-6">
-                                {parsed.description && <p className="text-muted-foreground leading-relaxed text-lg whitespace-pre-wrap">{parsed.description}</p>}
-                                {parsed.buttonUrl && (
-                                  <a href={parsed.buttonUrl} target="_blank" rel="noopener noreferrer">
-                                    <Button className="h-12 px-6 rounded-xl bg-gradient-to-r from-primary to-accent hover:shadow-lg hover:shadow-primary/25 transition-all text-base font-semibold text-white">
-                                      Acceder al enlace <ExternalLink className="w-4 h-4 ml-2" />
-                                    </Button>
-                                  </a>
-                                )}
-                              </div>
-                            )}
-
-                            {parsed.type === "image_full_width" && cs.imageUrl && (
-                              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="w-full rounded-2xl overflow-hidden border border-border/30 shadow-2xl shadow-primary/10 relative group">
-                                <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                <img src={cs.imageUrl} alt={cs.title} className="w-full h-auto object-cover max-h-[600px]" />
-                              </motion.div>
-                            )}
-
-                            {parsed.type === "contact" && (
-                              <div className="flex flex-col items-start gap-4 p-6 rounded-2xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 max-w-lg">
-                                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
-                                  <MessageCircle className="w-6 h-6" />
-                                </div>
-                                <div>
-                                  <h4 className="text-xl font-semibold mb-1">Ponte en contacto</h4>
-                                  <p className="text-muted-foreground">Conversemos directamente por WhatsApp para aclarar cualquier duda sobre esta propuesta.</p>
-                                </div>
-                                <a href={`https://api.whatsapp.com/send?phone=${parsed.phoneNumber?.replace(/\D/g, '')}&text=${encodeURIComponent(parsed.messageText || "Hola, quiero más información sobre la cotización")}`} target="_blank" rel="noopener noreferrer" className="w-full mt-2">
-                                  <Button className="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl text-md flex items-center gap-2 shadow-lg shadow-green-500/20">
-                                    <MessageCircle className="w-5 h-5" /> Enviar Mensaje
-                                  </Button>
-                                </a>
-                              </div>
-                            )}
+        <div className="max-w-5xl mx-auto space-y-5">
+          {/* Legacy template sections in expanded accordion */}
+          {visibleSections.length > 0 && (
+            <Accordion type="multiple" defaultValue={visibleSections.map((s, i) => s.templateSection?.key || `section-${i}`)} className="space-y-5">
+              {visibleSections.map((section, index) => {
+                const Icon = getIcon(section.templateSection.icon);
+                const sectionKey = section.templateSection?.key || `section-${index}`;
+                return (
+                  <motion.div key={sectionKey} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ delay: index * 0.08 }}>
+                    <AccordionItem value={sectionKey} className="border border-border/30 rounded-2xl bg-card/50 backdrop-blur-sm overflow-hidden data-[state=open]:bg-card/80 data-[state=open]:border-primary/30 data-[state=open]:shadow-lg data-[state=open]:shadow-primary/5 transition-all">
+                      <AccordionTrigger className="px-7 py-6 hover:no-underline hover:bg-muted/30 transition-colors group">
+                        <div className="flex items-center gap-5">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center group-hover:from-primary/20 group-hover:to-accent/20 transition-colors group-hover:scale-110 duration-300">
+                            <Icon className="w-6 h-6 text-primary" />
                           </div>
-                        );
-                      })()}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </motion.div>
-            ))}
-          </Accordion>
+                          <span className="text-xl font-semibold text-left">{section.title}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-7 pb-7">
+                        <Separator className="mb-7 bg-border/50" />
+                        {renderContent(section.content)}
+                      </AccordionContent>
+                    </AccordionItem>
+                  </motion.div>
+                );
+              })}
+            </Accordion>
+          )}
+
+          {/* Custom Sections — Mixed Rendering */}
+          {(() => {
+            const filteredSections = quote.customSections.filter(cs => {
+              try { const p = JSON.parse(cs.content || "{}"); return p.type !== "contract_clause"; } catch { return true; }
+            });
+
+            // Group sections: consecutive non-divider sections go into accordion groups
+            const groups: { type: 'accordion' | 'divider'; items: typeof filteredSections }[] = [];
+            let currentAccordion: typeof filteredSections = [];
+
+            filteredSections.forEach(cs => {
+              let parsed: any = {};
+              try { parsed = JSON.parse(cs.content || "{}"); } catch {}
+              if (parsed.type === 'image_full_width' || parsed.type === 'section_heading') {
+                if (currentAccordion.length > 0) {
+                  groups.push({ type: 'accordion', items: [...currentAccordion] });
+                  currentAccordion = [];
+                }
+                groups.push({ type: 'divider', items: [cs] });
+              } else {
+                currentAccordion.push(cs);
+              }
+            });
+            if (currentAccordion.length > 0) {
+              groups.push({ type: 'accordion', items: [...currentAccordion] });
+            }
+
+            // Calculate optionals total for dynamic price
+            const optionalsTotal = filteredSections.reduce((acc, cs) => {
+              try {
+                const p = JSON.parse(cs.content || "{}");
+                if (p.hasPrice && !p.includeInTotal && enabledOptionals[cs.id]) {
+                  const iva = p.hasIva ? 1 + ((p.ivaPercent || 15) / 100) : 1;
+                  return acc + ((p.price || 0) * iva);
+                }
+              } catch {}
+              return acc;
+            }, 0);
+
+            return groups.map((group, gIdx) => {
+              if (group.type === 'divider') {
+                const cs = group.items[0];
+                let parsed: any = {};
+                try { parsed = JSON.parse(cs.content || "{}"); } catch {}
+
+                if (parsed.type === 'image_full_width' && cs.imageUrl) {
+                  return (
+                    <motion.div key={`divider-${cs.id}`} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="w-full rounded-2xl overflow-hidden border border-border/30 shadow-2xl shadow-primary/10 relative group cursor-pointer" onClick={() => setLightboxSrc(cs.imageUrl)}>
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+                      <img src={cs.imageUrl} alt={cs.title} className="w-full h-auto object-cover max-h-[600px]" />
+                    </motion.div>
+                  );
+                }
+
+                if (parsed.type === 'section_heading') {
+                  return (
+                    <motion.div key={`heading-${cs.id}`} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="py-10 text-center">
+                      <div className="flex items-center gap-4 justify-center mb-4">
+                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                        <div className="w-3 h-3 rounded-full bg-primary/30" />
+                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                      </div>
+                      <h2 className="text-3xl md:text-4xl font-bold mb-3 text-gradient">{cs.title}</h2>
+                      {parsed.description && <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{parsed.description}</p>}
+                      <div className="flex items-center gap-4 justify-center mt-4">
+                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+                        <div className="w-3 h-3 rounded-full bg-accent/30" />
+                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+                      </div>
+                    </motion.div>
+                  );
+                }
+                return null;
+              }
+
+              // Accordion group
+              const defaultValues = group.items.map(cs => `custom-${cs.id}`);
+              return (
+                <Accordion key={`group-${gIdx}`} type="multiple" defaultValue={defaultValues} className="space-y-5">
+                  {group.items.map((cs, index) => {
+                    let parsed: any = {};
+                    try { parsed = JSON.parse(cs.content || "{}"); } catch {}
+                    const isOptional = parsed.hasPrice && !parsed.includeInTotal;
+                    const optionalEnabled = enabledOptionals[cs.id] || false;
+
+                    return (
+                      <motion.div key={`custom-${cs.id}`} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ delay: index * 0.08 }}>
+                        <AccordionItem value={`custom-${cs.id}`} className="border border-border/30 rounded-2xl bg-card/50 backdrop-blur-sm overflow-hidden data-[state=open]:bg-card/80 data-[state=open]:border-accent/30 data-[state=open]:shadow-lg data-[state=open]:shadow-accent/5 transition-all">
+                          <AccordionTrigger className="px-7 py-6 hover:no-underline hover:bg-muted/30 transition-colors group">
+                            <div className="flex items-center gap-5 w-full">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent/10 to-primary/10 flex items-center justify-center group-hover:from-accent/20 group-hover:to-primary/20 transition-colors group-hover:scale-110 duration-300">
+                                <PenLine className="w-6 h-6 text-accent" />
+                              </div>
+                              <span className="text-xl font-semibold text-left flex-1">{cs.title}</span>
+                              {/* Optional price badge */}
+                              {isOptional && parsed.price && (
+                                <div className="flex items-center gap-3 mr-2" onClick={e => e.stopPropagation()}>
+                                  <span className={`text-sm font-bold px-3 py-1 rounded-full ${optionalEnabled ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                                    +{formatCurrency(parsed.price * (parsed.hasIva ? 1 + ((parsed.ivaPercent || 15) / 100) : 1))}
+                                  </span>
+                                  <button
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleOptional(cs.id, !optionalEnabled); }}
+                                    disabled={optionalsLocked}
+                                    className={`w-12 h-7 rounded-full transition-colors relative ${optionalEnabled ? 'bg-primary' : 'bg-muted-foreground/30'} ${optionalsLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                                  >
+                                    <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${optionalEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                  </button>
+                                </div>
+                              )}
+                              {/* Mandatory price */}
+                              {parsed.hasPrice && parsed.includeInTotal && parsed.price && (
+                                <span className="text-sm font-semibold text-primary mr-2 bg-primary/10 px-3 py-1 rounded-full">
+                                  {formatCurrency(parsed.price * (parsed.hasIva ? 1 + ((parsed.ivaPercent || 15) / 100) : 1))}
+                                </span>
+                              )}
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-7 pb-7">
+                            <Separator className="mb-7 bg-border/50" />
+                            <div className="space-y-5">
+                              {(() => {
+                                if (!parsed || typeof parsed !== 'object') {
+                                  return <p className="text-muted-foreground leading-relaxed text-lg whitespace-pre-wrap">{cs.content}</p>;
+                                }
+                                return (
+                                  <div className="space-y-6">
+                                    {(parsed.type === "standard" || parsed.type === "title_desc_img_right" || parsed.type === "title_desc_img_left") && (
+                                      <div className={`flex flex-col gap-6 ${parsed.type === "title_desc_img_right" ? "md:flex-row" : parsed.type === "title_desc_img_left" ? "md:flex-row-reverse" : ""}`}>
+                                        <div className="flex-1 space-y-4">
+                                          {parsed.description && <p className="text-muted-foreground leading-relaxed text-lg whitespace-pre-wrap">{parsed.description}</p>}
+                                        </div>
+                                        {cs.imageUrl && (parsed.type === "title_desc_img_right" || parsed.type === "title_desc_img_left") && (
+                                          <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="w-full md:w-1/2 rounded-xl overflow-hidden border border-border/30 shadow-xl shadow-primary/5 cursor-pointer" onClick={() => setLightboxSrc(cs.imageUrl)}>
+                                            <img src={cs.imageUrl} alt={cs.title} className="w-full h-auto object-cover max-h-96" />
+                                          </motion.div>
+                                        )}
+                                      </div>
+                                    )}
+                                    {parsed.type === "title_desc_button" && (
+                                      <div className="space-y-6">
+                                        {parsed.description && <p className="text-muted-foreground leading-relaxed text-lg whitespace-pre-wrap">{parsed.description}</p>}
+                                        {parsed.buttonUrl && (
+                                          <a href={parsed.buttonUrl} target="_blank" rel="noopener noreferrer">
+                                            <Button className="h-12 px-6 rounded-xl bg-gradient-to-r from-primary to-accent hover:shadow-lg hover:shadow-primary/25 transition-all text-base font-semibold text-white">
+                                              Acceder al enlace <ExternalLink className="w-4 h-4 ml-2" />
+                                            </Button>
+                                          </a>
+                                        )}
+                                      </div>
+                                    )}
+                                    {parsed.type === "contact" && (
+                                      <div className="flex flex-col items-start gap-4 p-6 rounded-2xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 max-w-lg">
+                                        <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
+                                          <MessageCircle className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                          <h4 className="text-xl font-semibold mb-1">Ponte en contacto</h4>
+                                          <p className="text-muted-foreground">Conversemos directamente por WhatsApp para aclarar cualquier duda sobre esta propuesta.</p>
+                                        </div>
+                                        <a href={`https://api.whatsapp.com/send?phone=${parsed.phoneNumber?.replace(/\D/g, '')}&text=${encodeURIComponent(parsed.messageText || "Hola, quiero más información sobre la cotización")}`} target="_blank" rel="noopener noreferrer" className="w-full mt-2">
+                                          <Button className="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl text-md flex items-center gap-2 shadow-lg shadow-green-500/20">
+                                            <MessageCircle className="w-5 h-5" /> Enviar Mensaje
+                                          </Button>
+                                        </a>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </motion.div>
+                    );
+                  })}
+                </Accordion>
+              );
+            });
+          })()}
         </div>
       </section>
+
+      {/* Lightbox */}
+      {lightboxSrc && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <button className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors z-10">
+            <X className="w-6 h-6" />
+          </button>
+          <motion.img
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", damping: 25 }}
+            src={lightboxSrc}
+            alt="Imagen ampliada"
+            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl cursor-default"
+            onClick={e => e.stopPropagation()}
+          />
+        </motion.div>
+      )}
 
       {/* Dynamic Payment Info & Contract Hub */}
       {(paymentMethods.length > 0 || profile?.conditions || quote.status === "accepted") && (
@@ -873,144 +1094,228 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
                 </Card>
               </motion.div>
             ) : (
-             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-               <Card className="border-green-500/30 bg-gradient-to-br from-green-500/5 via-card to-accent/5 overflow-hidden relative shadow-2xl shadow-green-500/10">
-                 <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/10 rounded-full blur-3xl opacity-50" />
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+                <Card className="border-green-500/30 bg-gradient-to-br from-green-500/5 via-card to-accent/5 overflow-hidden relative shadow-2xl shadow-green-500/10">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/10 rounded-full blur-3xl opacity-50" />
                  
-                 <CardContent className="p-6 md:p-12 relative text-left">
-                   <div className="flex items-center gap-3 text-green-500 font-bold bg-green-500/10 px-6 py-3 rounded-full border border-green-500/20 w-fit mb-8">
-                      <CheckCircle2 className="w-5 h-5" /> Contrato Digital Activo
-                   </div>
+                  <CardContent className="p-6 md:p-12 relative text-left">
+                    <div className="flex items-center gap-3 text-green-500 font-bold bg-green-500/10 px-6 py-3 rounded-full border border-green-500/20 w-fit mb-8">
+                       <CheckCircle2 className="w-5 h-5" /> Contrato Digital Activo
+                    </div>
 
-                   {/* Contract Content */}
-                   {quote.contract && (
-                     <div className="space-y-6 text-foreground/80 leading-relaxed font-serif bg-muted/20 p-8 rounded-xl border border-border/50">
-                       <h2 className="text-2xl font-sans font-bold text-foreground mb-4 border-b border-border/50 pb-4">
-                         Acuerdo de Servicios Profesionales
-                       </h2>
-                       
-                       {(() => {
-                         try {
-                           const c = JSON.parse(quote.contract.content);
-                           return c.legalTerms.split('\n\n').map((paragraph: string, idx: number) => (
-                             <p key={idx} className="whitespace-pre-wrap">{paragraph}</p>
-                           ));
-                         } catch {
-                           return <p>{quote.contract.content}</p>;
-                         }
-                       })()}
+                    {/* Contract Content — Formal Legal Document */}
+                    {quote.contract && (
+                      <div className="space-y-0 text-foreground/85 leading-relaxed bg-muted/10 rounded-xl border border-border/50 overflow-hidden">
+                        
+                        {/* Formal Header */}
+                        <div className="bg-gradient-to-r from-muted/60 via-muted/40 to-muted/60 px-8 py-6 border-b border-border/50 text-center">
+                          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground font-sans font-semibold mb-2">Documento Legal Vinculante</p>
+                          <h2 className="text-2xl md:text-3xl font-bold text-foreground font-serif tracking-tight">
+                            ACUERDO DE SERVICIOS PROFESIONALES
+                          </h2>
+                          <p className="text-sm text-muted-foreground font-mono mt-2">
+                            Contrato N.&deg; {quote.token.substring(0, 8).toUpperCase()}-{new Date(quote.createdAt).getFullYear()}
+                          </p>
+                        </div>
 
-                       <div className="mt-8 pt-6 border-t border-border/50 space-y-2">
-                         <p className="font-bold font-sans">Firma Criptográfica Confidencial:</p>
-                         <p className="font-mono text-sm break-all text-muted-foreground">{quote.contract.signature}</p>
-                         <p className="text-sm font-sans text-muted-foreground">Firmado el: {new Date(quote.contract.signedAt).toLocaleString("es-EC")}</p>
-                       </div>
+                        <div className="px-8 py-8 space-y-8 font-serif text-[0.95rem]">
 
-                       {/* Extensions Render */}
-                       {quote.contract.metadata && JSON.parse(quote.contract.metadata).length > 0 && (
-                         <div className="mt-8 pt-8 border-t-2 border-dashed border-primary/30">
-                           <h3 className="font-sans font-bold text-primary mb-4 flex items-center gap-2"><PenLine className="w-5 h-5" /> Adendas y Extensiones Aprobadas</h3>
-                           <div className="space-y-4 font-sans">
-                             {JSON.parse(quote.contract.metadata).map((ext: any, idx: number) => (
-                               <div key={idx} className="bg-primary/5 border border-primary/20 p-4 rounded-lg relative overflow-hidden">
-                                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
-                                  <p className="text-sm text-foreground">{ext.text}</p>
-                                  <p className="text-xs text-muted-foreground mt-2 text-right">{new Date(ext.date).toLocaleString("es-EC")}</p>
-                               </div>
-                             ))}
-                           </div>
-                         </div>
-                       )}
-
-                       {/* Modification Request Input */}
-                       {showExtensionInput && (
-                         <div className="mt-8 p-6 bg-background rounded-xl border border-primary/30 font-sans">
-                           <h4 className="font-bold mb-3">{currentUser?.id === quote.user.profile?.userId ? "Añadir Cláusula Extensiva" : "Solicitar Modificación del Contrato"}</h4>
-                           <textarea className="w-full bg-muted p-4 rounded-lg outline-none min-h-[100px] resize-y border border-border focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Escribe el texto detallado..." value={extensionText} onChange={(e) => setExtensionText(e.target.value)} />
-                           <div className="flex justify-end gap-3 mt-4">
-                              <Button variant="ghost" onClick={() => setShowExtensionInput(false)}>Cancelar</Button>
-                              <Button className="btn-primary" disabled={isSubmittingExtension} onClick={handleExtension}>
-                                {isSubmittingExtension ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirmar"}
-                              </Button>
-                           </div>
-                         </div>
-                       )}
-                     </div>
-                   )}
-
-                   {/* Post-Contract Action Hub */}
-                   <div className="mt-10 border-t border-border/50 pt-10 font-sans flex flex-col md:flex-row items-center justify-between gap-6">
-                      <div className="flex items-center gap-3">
-                        <Button variant="outline" className="h-12 px-6 rounded-xl font-semibold border-primary/30 hover:bg-primary/10" onClick={() => {
-                           if (!currentUser) return window.location.href = "/auth/login"; // Client must auth
-                           setShowExtensionInput(!showExtensionInput);
-                        }}>
-                           {currentUser?.id === quote.user.profile?.userId ? "Extender Contrato" : "Solicitar Cambio"}
-                        </Button>
-                      </div>
-
-                      <div className="flex items-center gap-3 w-full md:w-auto">
-                        {quote.paymentLink && (
-                          <a href={quote.paymentLink} target="_blank" rel="noopener noreferrer" className="w-full md:w-auto">
-                            <Button className="w-full md:w-auto h-14 px-8 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-lg shadow-lg shadow-green-500/20 rounded-xl transition-all hover:scale-105" onClick={() => {
-                                 if (!quote.paymentLink) toast.info("Link de pago pendiente de asignación");
-                             }}>
-                               <DollarSign className="w-5 h-5 mr-2" /> Realizar Pago
-                            </Button>
-                          </a>
-                        )}
-
-                        <div className="relative w-full md:w-auto">
-                          <input type="file" id="capture-upload" accept="image/*" className="hidden" onChange={handleCaptureUpload} disabled={isUploadingCapture} />
-                          <label htmlFor="capture-upload" className="block w-full">
-                            <Button asChild variant="outline" className="w-full h-14 px-8 border-primary text-primary hover:bg-primary hover:text-white font-bold text-lg rounded-xl transition-all cursor-pointer">
-                              <div>
-                                {isUploadingCapture ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <ImageIcon className="w-5 h-5 mr-2" />}
-                                Enviar Capture
+                          {/* Parties Section */}
+                          <div className="space-y-4 pb-6 border-b border-border/40">
+                            <h3 className="text-lg font-bold font-sans uppercase tracking-wider text-foreground">Entre las Partes</h3>
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div className="p-4 rounded-lg bg-muted/20 border border-border/30">
+                                <p className="text-xs uppercase tracking-wider text-muted-foreground font-sans font-semibold mb-1">Prestador de Servicios</p>
+                                <p className="font-bold text-foreground text-lg font-sans">{quote.user.profile?.companyName || quote.user.name}</p>
+                                {quote.user.profile?.taxId && <p className="text-sm text-muted-foreground font-sans mt-0.5">RUC/NIT: {quote.user.profile.taxId}</p>}
                               </div>
-                            </Button>
-                          </label>
+                              <div className="p-4 rounded-lg bg-muted/20 border border-border/30">
+                                <p className="text-xs uppercase tracking-wider text-muted-foreground font-sans font-semibold mb-1">Contratante</p>
+                                <p className="font-bold text-foreground text-lg font-sans">{quote.companyName}</p>
+                                {quote.contactName && <p className="text-sm text-muted-foreground font-sans mt-0.5">Representado por: {quote.contactName}</p>}
+                              </div>
+                            </div>
+                            <p className="text-sm text-muted-foreground font-sans">
+                              Celebrado en la fecha <span className="font-semibold text-foreground">{formatDate(quote.createdAt)}</span>, respecto al proyecto denominado <span className="font-semibold text-foreground">&ldquo;{quote.projectName || "Servicios Profesionales"}&rdquo;</span>.
+                            </p>
+                          </div>
+
+                          {/* Contract Body / Legal Terms */}
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-bold font-sans uppercase tracking-wider text-foreground">Cuerpo del Contrato</h3>
+                            {(() => {
+                              try {
+                                const c = JSON.parse(quote.contract.content);
+                                const paragraphs = c.legalTerms.split('\n\n');
+                                return paragraphs.map((paragraph: string, idx: number) => (
+                                  <div key={idx} className="flex gap-3">
+                                    <span className="text-xs font-mono text-muted-foreground/60 mt-1 shrink-0 w-6 text-right">{idx + 1}.</span>
+                                    <p className="whitespace-pre-wrap flex-1">{paragraph}</p>
+                                  </div>
+                                ));
+                              } catch {
+                                return <p className="whitespace-pre-wrap">{quote.contract.content}</p>;
+                              }
+                            })()}
+                          </div>
+
+                          {/* Contract Clauses from custom sections */}
+                          {(() => {
+                            const contractClauses = quote.customSections.filter(cs => {
+                              try { const p = JSON.parse(cs.content || "{}"); return p.type === "contract_clause"; } catch { return false; }
+                            });
+                            const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'];
+                            if (contractClauses.length === 0) return null;
+                            return (
+                              <div className="space-y-4 pt-6 border-t border-border/40">
+                                <h3 className="text-lg font-bold font-sans uppercase tracking-wider text-foreground">Cl&aacute;usulas Adicionales</h3>
+                                <div className="space-y-5">
+                                  {contractClauses.map((clause, idx) => {
+                                    let parsed: any = {};
+                                    try { parsed = JSON.parse(clause.content || "{}"); } catch {}
+                                    return (
+                                      <div key={clause.id} className="pl-4 border-l-2 border-amber-500/40 space-y-1">
+                                        <p className="font-bold font-sans text-foreground flex items-center gap-2">
+                                          <span className="text-amber-500 font-serif">{romanNumerals[idx] || `${idx + 1}`}.</span>
+                                          {clause.title}
+                                        </p>
+                                        {parsed.description && (
+                                          <p className="whitespace-pre-wrap text-foreground/80 pl-6">{parsed.description}</p>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Signature Block */}
+                          <div className="pt-6 border-t border-border/40 space-y-4">
+                            <h3 className="text-lg font-bold font-sans uppercase tracking-wider text-foreground">Firma y Validaci&oacute;n</h3>
+                            <div className="grid md:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                <p className="text-xs uppercase tracking-wider text-muted-foreground font-sans font-semibold">Firma Criptogr&aacute;fica</p>
+                                <p className="font-mono text-xs break-all text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border/30">{quote.contract.signature}</p>
+                              </div>
+                              <div className="space-y-2">
+                                <p className="text-xs uppercase tracking-wider text-muted-foreground font-sans font-semibold">Fecha de Firma</p>
+                                <p className="text-foreground font-sans font-medium">{new Date(quote.contract.signedAt).toLocaleString("es-EC")}</p>
+                                <p className="text-xs text-muted-foreground font-sans">Hora del servidor registrada</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Legal Footer */}
+                          <div className="pt-6 border-t border-border/40">
+                            <p className="text-xs text-muted-foreground font-sans text-center leading-relaxed italic">
+                              Este documento constituye un acuerdo legal vinculante entre las partes firmantes. 
+                              Cualquier modificaci&oacute;n posterior deber&aacute; realizarse mediante adenda formal con consentimiento mutuo. 
+                              La firma digital tiene la misma validez legal que una firma manuscrita conforme a la legislaci&oacute;n vigente sobre comercio electr&oacute;nico.
+                            </p>
+                          </div>
+
+                          {/* Extensions Render */}
+                          {quote.contract.metadata && (() => { try { return JSON.parse(quote.contract.metadata).length > 0; } catch { return false; } })() && (
+                            <div className="pt-6 border-t-2 border-dashed border-primary/30 space-y-4">
+                              <h3 className="font-sans font-bold text-primary flex items-center gap-2"><PenLine className="w-5 h-5" /> Adendas y Extensiones Aprobadas</h3>
+                              <div className="space-y-4 font-sans">
+                                {(() => { try { return JSON.parse(quote.contract.metadata); } catch { return []; } })().map((ext: any, idx: number) => (
+                                  <div key={idx} className="bg-primary/5 border border-primary/20 p-4 rounded-lg relative overflow-hidden">
+                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+                                     <p className="text-sm text-foreground pl-3">{ext.text}</p>
+                                     <p className="text-xs text-muted-foreground mt-2 text-right">{new Date(ext.date).toLocaleString("es-EC")}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Modification Request Input */}
+                          {showExtensionInput && (
+                            <div className="p-6 bg-background rounded-xl border border-primary/30 font-sans">
+                              <h4 className="font-bold mb-3">{currentUser?.id === quote.user.profile?.userId ? "A\u00f1adir Cl\u00e1usula Extensiva" : "Solicitar Modificaci\u00f3n del Contrato"}</h4>
+                              <textarea className="w-full bg-muted p-4 rounded-lg outline-none min-h-[100px] resize-y border border-border focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Escribe el texto detallado..." value={extensionText} onChange={(e) => setExtensionText(e.target.value)} />
+                              <div className="flex justify-end gap-3 mt-4">
+                                 <Button variant="ghost" onClick={() => setShowExtensionInput(false)}>Cancelar</Button>
+                                 <Button className="btn-primary" disabled={isSubmittingExtension} onClick={handleExtension}>
+                                   {isSubmittingExtension ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirmar"}
+                                 </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
-                   </div>
+                    )}
 
-                   {/* Payment Captures & Modification Threads */}
-                   {quote.messages && quote.messages.length > 0 && (
-                     <div className="mt-12 space-y-6">
-                       <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
-                         <MessageCircle className="w-5 h-5 text-primary" /> Hilo de Registro Inmutable
-                       </h3>
-                       {quote.messages.map((msg: any) => (
-                         <div key={msg.id} className="p-5 rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm">
-                           <div className="flex justify-between items-center mb-3">
-                              <Badge variant={msg.type === "PAYMENT_CAPTURE" ? "success" : msg.type.includes("MODIFICATION") ? "warning" : "secondary"}>
-                                {msg.type === "PAYMENT_CAPTURE" ? "Comprobante de Pago Subido" : msg.type === "MODIFICATION_REQUEST" ? "Solicitud de Cliente" : msg.type === "MODIFICATION_APPROVED" ? "Solicitud Aprobada" : msg.type}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground">{new Date(msg.createdAt).toLocaleString("es-EC")}</span>
-                           </div>
-                           
-                           <p className="text-foreground">{msg.text}</p>
-                           
-                           {msg.imageUrl && (
-                             <div className="mt-4 rounded-xl overflow-hidden border border-border max-w-sm cursor-zoom-in hover:brightness-110 transition-all">
-                               <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer">
-                                  <img src={msg.imageUrl} alt="Captura de Pago" className="w-full h-auto object-cover" />
-                               </a>
-                             </div>
-                           )}
+                    {/* Post-Contract Action Hub */}
+                    <div className="mt-10 border-t border-border/50 pt-10 font-sans flex flex-col md:flex-row items-center justify-between gap-6">
+                       <div className="flex items-center gap-3">
+                         <Button variant="outline" className="h-12 px-6 rounded-xl font-semibold border-primary/30 hover:bg-primary/10" onClick={() => {
+                            if (!currentUser) return window.location.href = "/auth/login";
+                            setShowExtensionInput(!showExtensionInput);
+                         }}>
+                            {currentUser?.id === quote.user.profile?.userId ? "Extender Contrato" : "Solicitar Cambio"}
+                         </Button>
+                       </div>
 
-                           {msg.type === "MODIFICATION_REQUEST" && currentUser?.id === quote.user.profile?.userId && (
-                              <Button className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 rounded-lg font-bold shadow-md shadow-primary/20" onClick={() => handleApproveModification(msg.id)}>
-                                <CheckCircle2 className="w-4 h-4 mr-2" /> Aprobar e Instaurar en Contrato
-                              </Button>
-                           )}
+                       <div className="flex items-center gap-3 w-full md:w-auto">
+                         {quote.paymentLink && (
+                           <a href={quote.paymentLink} target="_blank" rel="noopener noreferrer" className="w-full md:w-auto">
+                             <Button className="w-full md:w-auto h-14 px-8 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-lg shadow-lg shadow-green-500/20 rounded-xl transition-all hover:scale-105">
+                                <DollarSign className="w-5 h-5 mr-2" /> Realizar Pago
+                             </Button>
+                           </a>
+                         )}
+
+                         <div className="relative w-full md:w-auto">
+                           <input type="file" id="capture-upload" accept="image/*" className="hidden" onChange={handleCaptureUpload} disabled={isUploadingCapture} />
+                           <label htmlFor="capture-upload" className="block w-full">
+                             <Button asChild variant="outline" className="w-full h-14 px-8 border-primary text-primary hover:bg-primary hover:text-white font-bold text-lg rounded-xl transition-all cursor-pointer">
+                               <div>
+                                 {isUploadingCapture ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <ImageIcon className="w-5 h-5 mr-2" />}
+                                 Enviar Capture
+                               </div>
+                             </Button>
+                           </label>
                          </div>
-                       ))}
-                     </div>
-                   )}
-                 </CardContent>
-               </Card>
-             </motion.div>
+                       </div>
+                    </div>
+
+                    {/* Payment Captures & Modification Threads */}
+                    {quote.messages && quote.messages.length > 0 && (
+                      <div className="mt-12 space-y-6">
+                        <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
+                          <MessageCircle className="w-5 h-5 text-primary" /> Hilo de Registro Inmutable
+                        </h3>
+                        {quote.messages.map((msg: any) => (
+                          <div key={msg.id} className="p-5 rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm">
+                            <div className="flex justify-between items-center mb-3">
+                               <Badge variant={msg.type === "PAYMENT_CAPTURE" ? "secondary" : msg.type.includes("MODIFICATION") ? "outline" : "secondary"}>
+                                 {msg.type === "PAYMENT_CAPTURE" ? "Comprobante de Pago" : msg.type === "MODIFICATION_REQUEST" ? "Solicitud de Cliente" : msg.type === "MODIFICATION_APPROVED" ? "Solicitud Aprobada" : msg.type}
+                               </Badge>
+                               <span className="text-xs text-muted-foreground">{new Date(msg.createdAt).toLocaleString("es-EC")}</span>
+                            </div>
+                            <p className="text-foreground">{msg.text}</p>
+                            {msg.imageUrl && (
+                              <div className="mt-4 rounded-xl overflow-hidden border border-border max-w-sm cursor-zoom-in hover:brightness-110 transition-all">
+                                <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer">
+                                   <img src={msg.imageUrl} alt="Captura de Pago" className="w-full h-auto object-cover" />
+                                </a>
+                              </div>
+                            )}
+                            {msg.type === "MODIFICATION_REQUEST" && currentUser?.id === quote.user.profile?.userId && (
+                               <Button className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 rounded-lg font-bold shadow-md shadow-primary/20" onClick={() => handleApproveModification(msg.id)}>
+                                 <CheckCircle2 className="w-4 h-4 mr-2" /> Aprobar e Instaurar en Contrato
+                               </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
             )}
           </div>
         </section>
@@ -1026,7 +1331,11 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
             className="flex justify-center mb-5"
           >
             <Link href="/">
-              <Logo size="md" />
+              {useWhiteLabel && quote.logoUrl ? (
+                <img src={quote.logoUrl} alt="Company Logo" className="h-12 object-contain opacity-70 hover:opacity-100 transition-opacity" />
+              ) : (
+                <Logo size="md" />
+              )}
             </Link>
           </motion.div>
           <div className="flex flex-col items-center justify-center mt-4 gap-2">

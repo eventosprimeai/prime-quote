@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { db } from '@/lib/db';
 
 /**
  * GET /api/versions
@@ -9,7 +7,7 @@ const prisma = new PrismaClient();
  */
 export async function GET() {
   try {
-    const versions = await prisma.appVersion.findMany({
+    const versions = await db.appVersion.findMany({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -39,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create version
-    const newVersion = await prisma.appVersion.create({
+    const newVersion = await db.appVersion.create({
       data: {
         version,
         title,

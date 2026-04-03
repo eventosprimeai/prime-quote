@@ -58,6 +58,12 @@ export async function POST(
       data: { status: 'accepted' }
     });
 
+    // Lock all optional selections
+    await db.quoteOptionalSelection.updateMany({
+      where: { quoteId: quote.id },
+      data: { lockedAt: new Date() }
+    });
+
     // Auto-generate Contract record
     const contract = await db.contract.create({
       data: {
@@ -72,6 +78,33 @@ export async function POST(
         signedAt: new Date()
       }
     });
+
+    // Emitir evento crítico al API Hub (WF-01: Quote Approved → PrimeFlow → Planner/Finanzas/Ranking)
+    const apiHubUrl = process.env.PRIME_API_HUB_URL || 'http://localhost:3006';
+    fetch(`${apiHubUrl}/api/events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.API_SECRET_KEY || 'ep_sk_prime_hub_2026'}`,
+      },
+      body: JSON.stringify({
+        event: 'quote.quote.approved',
+        app: 'primequote',
+        user_id: quote.user.id,
+        data: {
+          quote_id: quote.id,
+          token: quote.token,
+          company_name: quote.companyName,
+          project_name: quote.projectName,
+          project_price: quote.projectPrice,
+          currency: quote.currency,
+          contract_id: contract.id,
+          signed_at: contract.signedAt,
+          organizer_id: quote.user.id,
+          organizer_company: quote.user.profile?.companyName,
+        },
+      }),
+    }).catch(() => { /* Silencioso si el API Hub no está disponible */ });
 
     return NextResponse.json({ success: true, quote: updatedQuote, contract });
   } catch (error: any) {

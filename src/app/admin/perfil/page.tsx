@@ -178,6 +178,9 @@ export default function PerfilPage() {
       if (!response.ok) throw new Error("Error al guardar");
 
       toast.success("Perfil actualizado correctamente");
+      setTimeout(() => {
+        router.push("/admin/dashboard");
+      }, 1000);
     } catch (error) {
       toast.error("Error al guardar el perfil");
     } finally {
@@ -459,7 +462,7 @@ export default function PerfilPage() {
                         <div className="space-y-1">
                           <Label className="text-xs">RUC / CI</Label>
                           <Input
-                            placeholder="0922488481"
+                            placeholder="0999999999"
                             value={pm.ruc}
                             onChange={(e) => updatePaymentMethod(pm.id, "ruc", e.target.value)}
                           />

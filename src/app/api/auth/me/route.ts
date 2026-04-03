@@ -8,7 +8,7 @@ export async function GET() {
       return NextResponse.json({ user: null }, { status: 401 });
     }
     return NextResponse.json({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, plan: user.plan },
     });
   } catch (error) {
     return NextResponse.json({ user: null }, { status: 401 });

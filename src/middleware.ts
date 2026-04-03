@@ -11,6 +11,8 @@ export function middleware(request: NextRequest) {
     '/auth/register',
     '/api/auth/login',
     '/api/auth/register',
+    '/api/auth/google',
+    '/api/auth/google/callback',
     '/api/auth/logout',
     '/api/auth/me',
     '/api/init',
@@ -20,6 +22,7 @@ export function middleware(request: NextRequest) {
   // Public patterns
   if (
     publicPaths.includes(pathname) ||
+    pathname.startsWith('/auth/') ||
     pathname.startsWith('/cotizacion/') ||
     (pathname.startsWith('/api/quotes/') && request.method === 'GET') ||
     pathname.match(/^\/api\/quotes\/[^\/]+\/chat$/) ||

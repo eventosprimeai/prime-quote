@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { db } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,7 +15,7 @@ export async function POST(request: NextRequest) {
     let userId: string | null = null;
 
     if (sessionToken) {
-      const session = await prisma.session.findUnique({
+      const session = await db.session.findUnique({
         where: { token: sessionToken },
       });
       if (session && session.expiresAt > new Date()) {
@@ -31,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert subscription
-    await prisma.pushSubscription.upsert({
+    await db.pushSubscription.upsert({
       where: { endpoint: subscription.endpoint },
       create: {
         userId,

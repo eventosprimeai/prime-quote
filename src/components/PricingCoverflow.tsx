@@ -11,37 +11,37 @@ const appColor = '#a855f7';
 const plans = [
   { 
     name: 'Free', price: 0, period: '/mes', 
-    features: ['10 Cotizaciones/mes', 'Sin logo de empresa', 'Acceso básico', 'Funciones limitadas', 'Soporte por email', '1 usuario'], 
+    features: ['10 Cotizaciones/mes', 'Sin logo de empresa', '10 Plantillas de sección', '1 Paquete guardado', 'Acceso básico', 'Funciones limitadas', 'Soporte por email', '1 usuario'], 
     cta: 'Empezar gratis' 
   },
   { 
     name: 'Starter', price: 9, period: '/mes', 
-    features: ['50 Cotizaciones/mes', 'Subida de Logo Propio', 'Acceso completo', '500 créditos/mes', 'Soporte prioritario', '3 usuarios', 'Integraciones básicas'], 
+    features: ['50 Cotizaciones/mes', 'Subida de Logo Propio', '20 Plantillas de sección', '5 Paquetes guardados', 'Acceso completo', '500 créditos/mes', 'Soporte prioritario', '3 usuarios', 'Integraciones básicas'], 
     cta: 'Elegir Starter' 
   },
   { 
     name: 'Pro', price: 29, period: '/mes', 
-    features: ['150 Cotizaciones/mes', 'Exportación PDF y WhatsApp', 'Acceso completo', '2,000 créditos/mes', 'Soporte 24/7', '10 usuarios', 'Todas las integraciones', 'Reportes avanzados'], 
+    features: ['150 Cotizaciones/mes', 'Exportación PDF y WhatsApp', '50 Plantillas de sección', '10 Paquetes guardados', 'Acceso completo', '2,000 créditos/mes', 'Soporte 24/7', '10 usuarios', 'Todas las integraciones', 'Reportes avanzados'], 
     cta: 'Elegir Pro', featured: true 
   },
   { 
     name: 'Suite', price: 89, period: '/mes', 
-    features: ['Cotizaciones Ilimitadas', 'Firma y Contratos Digitales', 'Acceso a las 21 apps', '5,000 créditos/mes', 'Soporte VIP', 'Usuarios ilimitados', 'API access', 'Onboarding personalizado', 'Prime Ranking bonus'], 
+    features: ['Cotizaciones Ilimitadas', 'Firma y Contratos Digitales', 'Plantillas ilimitadas', '25 Paquetes guardados', 'Acceso a las 21 apps', '5,000 créditos/mes', 'Soporte VIP', 'Usuarios ilimitados', 'API access', 'Onboarding personalizado', 'Prime Ranking bonus'], 
     cta: 'Elegir Suite' 
   },
   { 
     name: 'Part-time partner', priceStr: 'Embajador', programName: 'Embajador', period: '', 
-    features: ['20 Cotizaciones (Uso personal)', 'Membresía Pro gratuita', 'Más puntos en Prime Ranking', 'Requisito: 2 referidos/mes', '1 post creativo/mes verificable', 'Insignia oficial', 'Aprobación sujeta a revisión'], 
+    features: ['20 Cotizaciones (Uso personal)', 'Membresía Pro gratuita', '50 Plantillas de sección', '10 Paquetes guardados', 'Más puntos en Prime Ranking', 'Requisito: 2 referidos/mes', '1 post creativo/mes verificable', 'Insignia oficial', 'Aprobación sujeta a revisión'], 
     cta: 'Postular a Embajador', isProgram: true 
   },
   { 
     name: 'Full-time partner', priceStr: 'Creador Ángel', programName: 'Ángel', period: '', 
-    features: ['50 Cotizaciones (Uso personal)', 'Membresía Suite gratuita', 'Accesos prioritarios', 'Más puntos en Prime Ranking', 'Requisito: Canal tutoriales', 'Uso creativo de nuestras apps', 'Aprobación sujeta a revisión'], 
+    features: ['50 Cotizaciones (Uso personal)', 'Membresía Suite gratuita', 'Plantillas ilimitadas', '25 Paquetes guardados', 'Accesos prioritarios', 'Más puntos en Prime Ranking', 'Requisito: Canal tutoriales', 'Uso creativo de nuestras apps', 'Aprobación sujeta a revisión'], 
     cta: 'Postular a Ángel', isProgram: true 
   },
   { 
     name: 'Personalizado', priceStr: 'Empresarial', period: '', 
-    features: ['Despliegue en marca blanca', 'Cotizaciones Multi-sucursal', 'Todo de Suite', 'Créditos ilimitados', 'SLA dedicado', 'Integración personalizada', 'Account manager', 'Facturación corporativa'], 
+    features: ['Despliegue en marca blanca', 'Cotizaciones Multi-sucursal', 'Todo de Suite', 'Plantillas y paquetes ilimitados', 'Créditos ilimitados', 'SLA dedicado', 'Integración personalizada', 'Account manager', 'Facturación corporativa'], 
     cta: 'Contactar ventas' 
   },
 ];

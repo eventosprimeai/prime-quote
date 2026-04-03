@@ -3,9 +3,7 @@
  * Controls feature access based on user plan
  */
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { db } from '@/lib/db';
 
 export type Plan = 'FREE' | 'STARTER' | 'PRO' | 'SUITE';
 
@@ -80,7 +78,7 @@ export async function getUserPlan(userId: string): Promise<{
   expiresAt: Date | null;
   provider: string | null;
 }> {
-  const subscription = await prisma.subscription.findUnique({
+  const subscription = await db.subscription.findUnique({
     where: { userId },
   });
 
@@ -96,11 +94,11 @@ export async function getUserPlan(userId: string): Promise<{
     subscription.status !== 'active'
   ) {
     // Subscription expired — downgrade to FREE
-    await prisma.subscription.update({
+    await db.subscription.update({
       where: { userId },
       data: { status: 'expired' },
     });
-    await prisma.user.update({
+    await db.user.update({
       where: { id: userId },
       data: { plan: 'FREE' },
     });
@@ -158,7 +156,7 @@ export async function canCreateQuote(userId: string): Promise<{
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const count = await prisma.quote.count({
+  const count = await db.quote.count({
     where: {
       userId,
       createdAt: { gte: startOfMonth },

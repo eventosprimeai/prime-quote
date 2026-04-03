@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { db } from '@/lib/db';
 import webPush from 'web-push';
-
-const prisma = new PrismaClient();
 
 // Configure web-push
 if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -29,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Find target subscriptions
     const whereClause = targetUserId ? { userId: targetUserId } : {};
-    const subscriptions = await prisma.pushSubscription.findMany({
+    const subscriptions = await db.pushSubscription.findMany({
       where: whereClause,
     });
 
@@ -58,7 +56,7 @@ export async function POST(request: NextRequest) {
           
           // Remove invalid subscriptions (410 Gone / 404 Not Found)
           if (error.statusCode === 410 || error.statusCode === 404) {
-            await prisma.pushSubscription.delete({ where: { id: sub.id } });
+            await db.pushSubscription.delete({ where: { id: sub.id } });
           }
         }
       })
