@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3002",
     "build": "next build && node -e \"require('fs').cpSync('.next/static', '.next/standalone/.next/static', {recursive:true}); require('fs').cpSync('public', '.next/standalone/public', {recursive:true});\"",
-    "start": "PORT=3002 NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
+    "start": "PORT=3060 NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
