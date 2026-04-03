@@ -13,6 +13,7 @@ export function middleware(request: NextRequest) {
     '/api/auth/register',
     '/api/auth/google',
     '/api/auth/google/callback',
+    '/api/auth/client-signer',
     '/api/auth/logout',
     '/api/auth/me',
     '/api/init',

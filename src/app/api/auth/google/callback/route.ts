@@ -8,11 +8,19 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get('code');
     const error = searchParams.get('error');
+    const stateRaw = searchParams.get('state');
 
     if (error || !code) {
       console.error('Google Auth Error:', error);
       return NextResponse.redirect(new URL('/auth/login?error=google_auth_failed', request.url));
     }
+
+    // Decode state to detect client_sign mode
+    let stateData: { mode?: string; quoteToken?: string } = {};
+    if (stateRaw) {
+      try { stateData = JSON.parse(Buffer.from(stateRaw, 'base64').toString()); } catch {}
+    }
+    const isClientSign = stateData.mode === 'client_sign' && !!stateData.quoteToken;
 
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -23,12 +31,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/login?error=config_missing', request.url));
     }
 
-    // Intercambiar el código por el token de acceso
+    // Exchange code for access token
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
@@ -39,61 +45,88 @@ export async function GET(request: NextRequest) {
     });
 
     const tokenData = await tokenResponse.json();
-
     if (!tokenResponse.ok) {
       console.error('Failed to get token:', tokenData);
       return NextResponse.redirect(new URL('/auth/login?error=token_failed', request.url));
     }
 
-    // Obtener información del usuario con el access token
+    // Get user info from Google
     const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
-      },
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
 
     const userData = await userResponse.json();
-
     if (!userResponse.ok || !userData.email) {
       console.error('Failed to fetch user data:', userData);
       return NextResponse.redirect(new URL('/auth/login?error=profile_failed', request.url));
     }
 
-    // Buscar si el usuario ya existe en Supabase DB
     const email = userData.email.toLowerCase();
-    let user = await db.user.findUnique({
-      where: { email },
-    });
 
-    // Si no existe, lo creamos
-    if (!user) {
-      // Necesitamos generar una contraseña aleatoria ya que no la proporcionaron
-      const randomPassword = randomBytes(16).toString('hex');
-      // No hacemos hash aquí pues es dummy login de OAuth, pero mantenemos compatibilidad por si deciden separarlo
+    // ─── CLIENT SIGN MODE ─────────────────────────────────────────
+    if (isClientSign) {
+      const quoteToken = stateData.quoteToken!;
+
+      // Verify this email is NOT the quote owner
+      const quote = await db.quote.findUnique({
+        where: { token: quoteToken },
+        include: { user: true }
+      });
+
+      if (!quote) {
+        const errUrl = new URL(`/cotizacion/${quoteToken}`, request.url);
+        errUrl.searchParams.set('sign_error', 'quote_not_found');
+        return NextResponse.redirect(errUrl);
+      }
+
+      if (quote.user.email.toLowerCase() === email) {
+        const errUrl = new URL(`/cotizacion/${quoteToken}`, request.url);
+        errUrl.searchParams.set('sign_error', 'owner_cannot_sign');
+        return NextResponse.redirect(errUrl);
+      }
+
+      // Set client_signer cookie on the redirect response
+      const signerPayload = JSON.stringify({ email, name: userData.name || '', quoteToken });
+      console.log('[CLIENT_SIGN] Setting cookie for:', email, 'quoteToken:', quoteToken);
+      console.log('[CLIENT_SIGN] Payload:', signerPayload);
       
+      const redirectBack = new URL(`/cotizacion/${quoteToken}`, request.url);
+      redirectBack.searchParams.set('client_verified', '1');
+      
+      const res = NextResponse.redirect(redirectBack);
+      res.cookies.set('client_signer', signerPayload, {
+        httpOnly: false,
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 60 * 30,
+        path: '/',
+      });
+      
+      console.log('[CLIENT_SIGN] Response headers:', Object.fromEntries(res.headers.entries()));
+      return res;
+    }
+    // ─────────────────────────────────────────────────────────────
+
+    // Normal admin login flow
+    let user = await db.user.findUnique({ where: { email } });
+
+    if (!user) {
+      const randomPassword = randomBytes(16).toString('hex');
       user = await db.user.create({
         data: {
           email,
           name: userData.name || userData.given_name || 'Usuario',
-          password: randomPassword, // Ignorado en login oauth pero requerido en el schema
+          password: randomPassword,
           plan: 'FREE',
           role: 'user',
         },
       });
-      
-      // Creamos el BusinessProfile vacío por si acaso
       await db.businessProfile.create({
-        data: {
-          userId: user.id,
-          companyName: userData.name || 'Mi Empresa',
-        }
+        data: { userId: user.id, companyName: userData.name || 'Mi Empresa' }
       });
     }
 
-    // Crear sesión en PWA/Web
     await createSession(user.id);
-
-    // Redirigir al dashboard con pase verde
     return NextResponse.redirect(new URL('/admin/dashboard', request.url));
 
   } catch (err) {

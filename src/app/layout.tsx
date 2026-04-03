@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -12,6 +12,10 @@ const inter = Inter({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#0a0a1a",
+};
+
 export const metadata: Metadata = {
   title: "Cotizador Pro | Eventos Prime Tecnología",
   description: "Sistema profesional de generación de cotizaciones digitales",
@@ -21,7 +25,6 @@ export const metadata: Metadata = {
     icon: "/logo.svg",
     apple: "/apple-touch-icon.png",
   },
-  themeColor: "#0a0a1a",
 };
 
 export default function RootLayout({

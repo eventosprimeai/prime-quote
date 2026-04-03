@@ -9,7 +9,7 @@ import {
   FileText, DollarSign, Save, Loader2, Check, Settings2, Plus,
   Trash2, ImageIcon, Upload, X, LayoutTemplate, MessageCircle, Image as ImageIcon2,
   Link as LinkIcon, CreditCard, AlignLeft, Bot, GripVertical, Copy, Focus,
-  Pencil, Package, BookmarkPlus, Scale, Eye
+  Pencil, Package, BookmarkPlus, Scale, Eye, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -785,6 +785,13 @@ export default function NuevaCotizacionPage() {
                   <ImageIcon className="w-6 h-6 mr-2" /> Subir Imagen de Portada
                 </Button>
               )}
+              <div className="p-3 rounded-lg bg-muted/50 border border-border/40 space-y-1.5">
+                <p className="text-xs font-semibold text-foreground/80">📐 Medida recomendada: <span className="text-primary">851 × 315 px</span> — JPG o WebP (imagen liviana)</p>
+                <p className="text-xs text-muted-foreground">¿No tienes la imagen lista? Usa esta plantilla de Canva, sube tu foto, ajústala y descárgala en JPG:</p>
+                <a href="https://canva.link/m7afwktr190r5jw" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium">
+                  <ExternalLink className="w-3 h-3" /> Abrir plantilla de portada en Canva
+                </a>
+              </div>
             </div>
           </div>
         );
@@ -823,6 +830,13 @@ export default function NuevaCotizacionPage() {
                     <ImageIcon className="w-4 h-4 mr-2" /> Elegir Imagen
                   </Button>
                 )}
+                <div className="p-3 rounded-lg bg-muted/50 border border-border/40 space-y-1.5">
+                  <p className="text-xs font-semibold text-foreground/80">📐 Medida recomendada: <span className="text-primary">720 × 720 px</span> — JPG o WebP (imagen liviana)</p>
+                  <p className="text-xs text-muted-foreground">¿Quieres que quede perfecta? Usa esta plantilla de Canva, sube tu foto, ajústala y descárgala en JPG:</p>
+                  <a href="https://canva.link/sg0zrf55bcxa5ei" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium">
+                    <ExternalLink className="w-3 h-3" /> Abrir plantilla cuadrada en Canva
+                  </a>
+                </div>
               </div>
             )}
 

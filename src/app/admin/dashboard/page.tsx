@@ -24,11 +24,32 @@ import {
   Download,
   Upload,
   Pencil,
-  Lock
+  Lock,
+  MoreVertical,
+  ExternalLink,
+  Copy,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Logo } from "@/components/ui/logo";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 interface Quote {
@@ -61,6 +82,7 @@ export default function DashboardPage() {
   const [unreadMap, setUnreadMap] = useState<Record<string, { count: number }>>({});
   const [totalUnread, setTotalUnread] = useState(0);
   const [isImporting, setIsImporting] = useState(false);
+  const [deleteToken, setDeleteToken] = useState<string | null>(null);
 
   useEffect(() => {
     fetchQuotes();
@@ -188,6 +210,36 @@ export default function DashboardPage() {
     } finally {
       setIsImporting(false);
       e.target.value = '';
+    }
+  };
+
+  const handleCopyLink = (e: React.MouseEvent, token: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${window.location.origin}/cotizacion/${token}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Enlace copiado al portapapeles");
+  };
+
+  const handleDeleteQuote = async () => {
+    if (!deleteToken) return;
+    try {
+      const response = await fetch(`/api/quotes/${deleteToken}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Error al eliminar");
+      setQuotes(prev => prev.filter(q => q.token !== deleteToken));
+      toast.success("Cotización eliminada");
+      // Recalc stats
+      const remaining = quotes.filter(q => q.token !== deleteToken);
+      setStats({
+        total: remaining.length,
+        draft: remaining.filter(q => q.status === "draft").length,
+        sent: remaining.filter(q => q.status === "sent" || q.status === "viewed").length,
+        accepted: remaining.filter(q => q.status === "accepted").length,
+      });
+    } catch {
+      toast.error("Error al eliminar cotización");
+    } finally {
+      setDeleteToken(null);
     }
   };
 
@@ -584,6 +636,39 @@ export default function DashboardPage() {
                               {formatCurrency(quote.projectPrice)}
                             </span>
                             {getStatusBadge(quote.status)}
+
+                            {/* Three-dot menu */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center bg-muted/50 hover:bg-muted/80 transition-colors"
+                                >
+                                  <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/cotizacion/${quote.token}`} target="_blank">
+                                    <ExternalLink className="w-4 h-4 mr-2" />
+                                    Abrir en nueva pestaña
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => handleCopyLink(e, quote.token)}>
+                                  <Copy className="w-4 h-4 mr-2" />
+                                  Copiar enlace
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteToken(quote.token); }}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+
                             <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                           </div>
                         </div>
@@ -605,6 +690,24 @@ export default function DashboardPage() {
           )}
         </motion.div>
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteToken} onOpenChange={() => setDeleteToken(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar cotización?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. La cotización será eliminada permanentemente junto con todas sus secciones, mensajes e historial.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteQuote} className="bg-red-600 hover:bg-red-700">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use, useCallback } from "react";
+import { useState, useEffect, use, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -19,7 +19,11 @@ import {
   PenLine,
   ImageIcon,
   Download,
-  MessageCircle
+  MessageCircle,
+  ShieldCheck,
+  ScrollText,
+  Globe,
+  Monitor
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -130,13 +134,36 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
   const [enabledOptionals, setEnabledOptionals] = useState<Record<string, boolean>>({});
   const [optionalsLocked, setOptionalsLocked] = useState(false);
 
+  // Contract modal & client signing
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [clientSigner, setClientSigner] = useState<{ email: string; name: string } | null>(null);
+  const [isCheckingSigner, setIsCheckingSigner] = useState(false);
+  const contractBottomRef = useRef<HTMLDivElement>(null);
+
+  // Must declare before useEffects that consume it
+  const searchParams = useSearchParams();
+
   useEffect(() => {
     fetchUser();
     fetchQuote();
+    checkClientSigner();
   }, [token]);
 
+  // Detect return from Google OAuth (client_verified or sign_error)
+  useEffect(() => {
+    const verified = searchParams.get('client_verified');
+    const signError = searchParams.get('sign_error');
+    if (verified === '1') {
+      checkClientSigner();
+      window.history.replaceState({}, '', `/cotizacion/${token}`);
+    }
+    if (signError === 'owner_cannot_sign') {
+      toast.error('El propietario de la cotización no puede firmar su propio contrato.');
+      window.history.replaceState({}, '', `/cotizacion/${token}`);
+    }
+  }, [searchParams]);
+
   // ─── Referral Engine ────────────────────────────────────────────
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     const refCode = searchParams.get("ref");
@@ -172,6 +199,22 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
          setCurrentUser(data.user);
        }
     } catch {}
+  };
+
+  const checkClientSigner = async () => {
+    setIsCheckingSigner(true);
+    try {
+      const res = await fetch(`/api/auth/client-signer?token=${token}&_t=${Date.now()}`, {
+        cache: 'no-store'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.verified) setClientSigner({ email: data.email, name: data.name });
+        else setClientSigner(null);
+      }
+    } catch {} finally {
+      setIsCheckingSigner(false);
+    }
   };
 
   const fetchQuote = async () => {
@@ -855,9 +898,8 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
 
                 if (parsed.type === 'image_full_width' && cs.imageUrl) {
                   return (
-                    <motion.div key={`divider-${cs.id}`} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="w-full rounded-2xl overflow-hidden border border-border/30 shadow-2xl shadow-primary/10 relative group cursor-pointer" onClick={() => setLightboxSrc(cs.imageUrl)}>
-                      <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
-                      <img src={cs.imageUrl} alt={cs.title} className="w-full h-auto object-cover max-h-[600px]" />
+                    <motion.div key={`divider-${cs.id}`} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="w-full overflow-hidden cursor-pointer -mx-6 sm:mx-0 sm:rounded-2xl" onClick={() => setLightboxSrc(cs.imageUrl)}>
+                      <img src={cs.imageUrl} alt={cs.title} className="w-full h-auto object-cover max-h-[600px] block" />
                     </motion.div>
                   );
                 }
@@ -1035,11 +1077,39 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
                         {profile?.conditions || "Para iniciar el proyecto, aprueba esta cotización revisando detalladamente la propuesta superior."}
                       </p>
                       
-                      <div className="mt-8 border-t border-border/50 pt-8">
-                        <Button disabled={isApproving} onClick={handleApprove} className="btn-neon w-full sm:w-auto h-14 px-10 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
-                          {isApproving ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : <PenLine className="w-6 h-6 mr-3" />}
-                          Aprobar y Firmar Digitalmente
-                        </Button>
+                      <div id="contract-action-section" className="mt-8 border-t border-border/50 pt-8">
+                        {clientSigner ? (
+                          <>
+                            <div className="flex items-center gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20 mb-5 justify-center">
+                              <ShieldCheck className="w-4 h-4 text-green-400 shrink-0" />
+                              <p className="text-sm text-green-400 font-semibold">{clientSigner.name} &mdash; {clientSigner.email}</p>
+                            </div>
+                            <Button
+                              disabled={isApproving}
+                              onClick={handleApprove}
+                              className="btn-neon w-full sm:w-auto h-14 px-10 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+                            >
+                              {isApproving ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : <PenLine className="w-6 h-6 mr-3" />}
+                              Aprobar y Firmar Digitalmente
+                            </Button>
+                            <p className="text-xs text-muted-foreground mt-3">
+                              Al firmar, aceptas íntegramente el contrato. Esta acción es irreversible.
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              onClick={() => setShowContractModal(true)}
+                              className="btn-neon w-full sm:w-auto h-14 px-10 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+                            >
+                              <ScrollText className="w-6 h-6 mr-3" />
+                              Ver Contrato
+                            </Button>
+                            <p className="text-xs text-muted-foreground mt-3">
+                              Revisa el contrato completo y firma digitalmente al final.
+                            </p>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -1190,7 +1260,7 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
                             );
                           })()}
 
-                          {/* Signature Block */}
+                          {/* Signature Block — with forensic metadata */}
                           <div className="pt-6 border-t border-border/40 space-y-4">
                             <h3 className="text-lg font-bold font-sans uppercase tracking-wider text-foreground">Firma y Validaci&oacute;n</h3>
                             <div className="grid md:grid-cols-2 gap-6">
@@ -1204,6 +1274,61 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
                                 <p className="text-xs text-muted-foreground font-sans">Hora del servidor registrada</p>
                               </div>
                             </div>
+                            {/* Forensic metadata from Google OAuth */}
+                            {(() => {
+                              try {
+                                const meta = JSON.parse(quote.contract.metadata || '{}');
+                                if (!meta.clientEmail && !meta.ipAddress) return null;
+                                return (
+                                  <div className="mt-4 p-4 rounded-xl bg-green-500/5 border border-green-500/20 space-y-3">
+                                    <p className="text-xs uppercase tracking-wider font-sans font-semibold text-green-400 flex items-center gap-2">
+                                      <ShieldCheck className="w-4 h-4" /> Verificaci&oacute;n del Firmante
+                                    </p>
+                                    <div className="grid sm:grid-cols-2 gap-3 text-xs font-sans">
+                                      {meta.clientEmail && (
+                                        <div className="flex items-start gap-2">
+                                          <ShieldCheck className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />
+                                          <div>
+                                            <p className="text-muted-foreground">Correo verificado</p>
+                                            <p className="text-foreground font-medium">{meta.clientEmail}</p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {meta.authMethod && (
+                                        <div className="flex items-start gap-2">
+                                          <Check className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />
+                                          <div>
+                                            <p className="text-muted-foreground">M&eacute;todo de autenticaci&oacute;n</p>
+                                            <p className="text-foreground font-medium">{meta.authMethod}</p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {meta.ipAddress && meta.ipAddress !== 'Unknown' && (
+                                        <div className="flex items-start gap-2">
+                                          <Globe className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                                          <div>
+                                            <p className="text-muted-foreground">Direcci&oacute;n IP</p>
+                                            <p className="text-foreground font-mono">{meta.ipAddress}</p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {meta.userAgent && meta.userAgent !== 'Unknown' && (
+                                        <div className="flex items-start gap-2">
+                                          <Monitor className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                                          <div>
+                                            <p className="text-muted-foreground">Dispositivo</p>
+                                            <p className="text-foreground truncate" title={meta.userAgent}>
+                                              {meta.userAgent.includes('Mobile') ? '📱 Móvil' : '💻 Escritorio'}
+                                              {meta.userAgent.includes('Chrome') ? ' · Chrome' : meta.userAgent.includes('Firefox') ? ' · Firefox' : meta.userAgent.includes('Safari') ? ' · Safari' : ''}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              } catch { return null; }
+                            })()}
                           </div>
 
                           {/* Legal Footer */}
@@ -1356,6 +1481,248 @@ export default function CotizacionPage({ params }: { params: Promise<{ token: st
 
       {/* Floating Chat */}
       <ChatWidget token={token} />
+
+      {/* ════════════════════════════════════════════════════════
+          CONTRACT MODAL — Ver Contrato → Identificarse → Firmar
+          ════════════════════════════════════════════════════════ */}
+      {showContractModal && quote && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md overflow-y-auto">
+          <div className="min-h-full flex items-start justify-center py-6 px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="relative w-full max-w-4xl bg-card border border-border/50 rounded-2xl shadow-2xl shadow-primary/5 overflow-hidden"
+            >
+              {/* Close button — fixed top-right */}
+              <button
+                onClick={() => setShowContractModal(false)}
+                className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-muted/60 backdrop-blur flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Formal Header — identical to signed contract */}
+              <div className="bg-gradient-to-r from-muted/60 via-muted/40 to-muted/60 px-8 py-8 border-b border-border/50 text-center">
+                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground font-sans font-semibold mb-2">Documento Legal Vinculante</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground font-serif tracking-tight">
+                  ACUERDO DE SERVICIOS PROFESIONALES
+                </h2>
+                <p className="text-sm text-muted-foreground font-mono mt-2">
+                  Contrato N.&deg; {quote.token.substring(0, 8).toUpperCase()}-{new Date(quote.createdAt).getFullYear()}
+                </p>
+              </div>
+
+              {/* Contract Body */}
+              <div className="px-8 py-8 space-y-8 font-serif text-[0.95rem] text-foreground/85 leading-relaxed">
+
+                {/* Parties Section */}
+                <div className="space-y-4 pb-6 border-b border-border/40">
+                  <h3 className="text-lg font-bold font-sans uppercase tracking-wider text-foreground">Entre las Partes</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-lg bg-muted/20 border border-border/30">
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground font-sans font-semibold mb-1">Prestador de Servicios</p>
+                      <p className="font-bold text-foreground text-lg font-sans">{quote.user.profile?.companyName || quote.user.name}</p>
+                      {quote.user.profile?.taxId && <p className="text-sm text-muted-foreground font-sans mt-0.5">RUC/NIT: {quote.user.profile.taxId}</p>}
+                    </div>
+                    <div className="p-4 rounded-lg bg-muted/20 border border-border/30">
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground font-sans font-semibold mb-1">Contratante</p>
+                      <p className="font-bold text-foreground text-lg font-sans">{quote.companyName}</p>
+                      {quote.contactName && <p className="text-sm text-muted-foreground font-sans mt-0.5">Representado por: {quote.contactName}</p>}
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground font-sans">
+                    Celebrado en la fecha <span className="font-semibold text-foreground">{formatDate(quote.createdAt)}</span>, respecto al proyecto denominado <span className="font-semibold text-foreground">&ldquo;{quote.projectName || "Servicios Profesionales"}&rdquo;</span>.
+                  </p>
+                </div>
+
+                {/* Contract Body — Sections */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold font-sans uppercase tracking-wider text-foreground">Cuerpo del Contrato</h3>
+                  <p className="text-sm font-sans text-muted-foreground">
+                    El presente contrato de prestación de servicios es celebrado por una parte entre &quot;{quote.user.profile?.companyName || quote.user.name}&quot; (en adelante &quot;El Profesional&quot;) y por la otra parte &quot;{quote.companyName}&quot; (en adelante &quot;El Cliente&quot;). Ambas partes acuerdan la ejecución de las siguientes acciones y servicios de acuerdo a la propuesta técnico-comercial detallada a continuación:
+                  </p>
+
+                  {/* Template sections */}
+                  {[...quote.sections].filter(s => s.isVisible).map((s, idx) => {
+                    let parsed: any = {};
+                    try { parsed = JSON.parse(s.content); } catch {}
+                    const desc = parsed.text || parsed.description || parsed.intro || "Detalle especificado en propuesta técnica.";
+                    return (
+                      <div key={s.id} className="flex gap-3">
+                        <span className="text-xs font-mono text-muted-foreground/60 mt-1 shrink-0 w-6 text-right">{idx + 1}.</span>
+                        <div className="flex-1">
+                          <p className="font-bold font-sans text-foreground">{s.title.toUpperCase()}</p>
+                          <p className="whitespace-pre-wrap">{desc}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Custom sections (non-clause) */}
+                  {quote.customSections.filter(cs => {
+                    try { return JSON.parse(cs.content || '{}').type !== 'contract_clause'; } catch { return true; }
+                  }).map((cs, idx) => {
+                    let parsed: any = {};
+                    try { parsed = JSON.parse(cs.content || '{}'); } catch {}
+                    const desc = parsed.text || parsed.description || parsed.intro || "Condición personalizada adjunta.";
+                    const offset = quote.sections.filter(s => s.isVisible).length;
+                    return (
+                      <div key={cs.id} className="flex gap-3">
+                        <span className="text-xs font-mono text-muted-foreground/60 mt-1 shrink-0 w-6 text-right">{offset + idx + 1}.</span>
+                        <div className="flex-1">
+                          <p className="font-bold font-sans text-foreground">{cs.title.toUpperCase()}</p>
+                          <p className="whitespace-pre-wrap">{desc}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Special contract clauses (roman numerals) */}
+                {(() => {
+                  const contractClauses = quote.customSections.filter(cs => {
+                    try { return JSON.parse(cs.content || '{}').type === 'contract_clause'; } catch { return false; }
+                  });
+                  const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+                  if (contractClauses.length === 0) return null;
+                  return (
+                    <div className="space-y-4 pt-6 border-t border-border/40">
+                      <h3 className="text-lg font-bold font-sans uppercase tracking-wider text-foreground">Cl&aacute;usulas Adicionales</h3>
+                      <div className="space-y-5">
+                        {contractClauses.map((clause, idx) => {
+                          let parsed: any = {};
+                          try { parsed = JSON.parse(clause.content || '{}'); } catch {}
+                          return (
+                            <div key={clause.id} className="pl-4 border-l-2 border-amber-500/40 space-y-1">
+                              <p className="font-bold font-sans text-foreground flex items-center gap-2">
+                                <span className="text-amber-500 font-serif">{romanNumerals[idx] || `${idx + 1}`}.</span>
+                                {clause.title}
+                              </p>
+                              {parsed.description && (
+                                <p className="whitespace-pre-wrap text-foreground/80 pl-6">{parsed.description}</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* General Clauses */}
+                <div className="space-y-2 pt-6 border-t border-border/40">
+                  <p className="whitespace-pre-wrap">CLÁUSULAS ESPECIALES:{'\n'}Ambos comparecientes declaran su absoluta conformidad con lo estipulado en este documento extendido. Toda solicitud de modificación o extensión sobre los servicios descritos deberá ser solicitada electrónicamente en la presente plataforma.</p>
+                  <p className="whitespace-pre-wrap">Al presionar el botón de firma, el Cliente autoriza el inicio inmediato de las actividades, y aprueba digitalmente este acuerdo formalizando la cotización en un compromiso vinculante de servicios profesionales.</p>
+                </div>
+
+                {/* Price */}
+                {quote.projectPrice && (
+                  <div className="p-6 rounded-xl bg-gradient-to-br from-primary/10 to-accent/5 border border-primary/20 text-center">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-sans font-semibold mb-2">Valor Total Acordado</p>
+                    <p className="text-4xl font-bold text-gradient font-sans">{formatCurrency(quote.projectPrice)}</p>
+                  </div>
+                )}
+
+                {/* Legal Footer */}
+                <div className="pt-6 border-t border-border/40">
+                  <p className="text-xs text-muted-foreground font-sans text-center leading-relaxed italic">
+                    Este documento constituye un acuerdo legal vinculante entre las partes firmantes.
+                    Cualquier modificaci&oacute;n posterior deber&aacute; realizarse mediante adenda formal con consentimiento mutuo.
+                    La firma digital tiene la misma validez legal que una firma manuscrita conforme a la legislaci&oacute;n vigente sobre comercio electr&oacute;nico.
+                  </p>
+                </div>
+
+                {/* ── SIGN BLOCK ── */}
+                <div ref={contractBottomRef} className="pt-8 border-t-2 border-dashed border-primary/30 space-y-5">
+                  {clientSigner ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                        <ShieldCheck className="w-5 h-5 text-green-400 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-green-400 font-sans">Identidad verificada con Google</p>
+                          <p className="text-xs text-muted-foreground font-sans">{clientSigner.name} &mdash; {clientSigner.email}</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground font-sans text-center">
+                        Al presionar el botón confirmas haber leído y aceptado íntegramente este contrato.{' '}
+                        <strong className="text-foreground">Esta acción es irreversible.</strong>
+                      </p>
+                      <Button
+                        disabled={isApproving}
+                        onClick={handleApprove}
+                        className="btn-neon w-full h-14 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform"
+                      >
+                        {isApproving
+                          ? <Loader2 className="w-5 h-5 animate-spin mr-3" />
+                          : <PenLine className="w-5 h-5 mr-3" />
+                        }
+                        Aprobar y Firmar Digitalmente
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="space-y-3 text-center">
+                        <h4 className="font-bold text-lg font-sans">Verificación de Identidad Requerida</h4>
+                        <p className="text-sm text-muted-foreground font-sans max-w-lg mx-auto">
+                          Para formalizar este acuerdo, necesitamos verificar tu identidad. Este proceso garantiza la validez legal del contrato para ambas partes.
+                        </p>
+                      </div>
+
+                      {/* What gets recorded — serious tone */}
+                      <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-3">
+                        <p className="text-xs uppercase tracking-wider font-sans font-semibold text-amber-400 flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4" /> Registro Criptográfico de Firma
+                        </p>
+                        <div className="grid sm:grid-cols-2 gap-2 text-xs font-sans text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Check className="w-3 h-3 text-amber-400 shrink-0" />
+                            <span>Correo electrónico verificado</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Globe className="w-3 h-3 text-amber-400 shrink-0" />
+                            <span>Dirección IP del firmante</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Monitor className="w-3 h-3 text-amber-400 shrink-0" />
+                            <span>Dispositivo y navegador utilizado</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-3 h-3 text-amber-400 shrink-0" />
+                            <span>Fecha, hora exacta y zona horaria</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-amber-200/60 font-sans">
+                          Estos datos se almacenan de forma inmutable y constituyen evidencia legal de la firma digital conforme a la normativa de comercio electrónico vigente.
+                        </p>
+                      </div>
+
+                      {/* Google button — dark background, high contrast */}
+                      <div className="text-center">
+                        <a
+                          href={`/api/auth/google?mode=client_sign&quoteToken=${token}`}
+                          className="inline-flex items-center justify-center gap-3 w-full sm:w-auto h-14 px-10 rounded-xl bg-gray-900 text-white font-bold text-base shadow-xl border border-gray-700 hover:bg-gray-800 hover:shadow-2xl transition-all"
+                        >
+                          <svg className="w-5 h-5" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                          </svg>
+                          Verificar mi Identidad con Google
+                        </a>
+                        <p className="text-xs text-muted-foreground/50 font-sans mt-3">
+                          No se creará ninguna cuenta. Solo se verifica tu correo para vincularlo al contrato.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { cookies } from 'next/headers';
 
 export async function POST(
   request: NextRequest,
@@ -8,6 +9,30 @@ export async function POST(
   try {
     const { token } = await params;
     const { signature } = await request.json();
+
+    // ─── Read client_signer cookie ───────────────────────────────
+    const cookieStore = await cookies();
+    const signerCookie = cookieStore.get('client_signer');
+    let signerEmail: string | null = null;
+    let signerName: string | null = null;
+
+    if (signerCookie?.value) {
+      try {
+        const parsed = JSON.parse(signerCookie.value);
+        if (parsed.quoteToken === token) {
+          signerEmail = parsed.email || null;
+          signerName = parsed.name || null;
+        }
+      } catch {}
+    }
+
+    // Capture forensic metadata
+    const ipAddress =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      'Unknown';
+    const userAgent = request.headers.get('user-agent') || 'Unknown';
+    const signedAt = new Date().toISOString();
 
     const quote = await db.quote.findUnique({
       where: { token },
@@ -64,7 +89,7 @@ export async function POST(
       data: { lockedAt: new Date() }
     });
 
-    // Auto-generate Contract record
+    // Auto-generate Contract record with full forensic metadata
     const contract = await db.contract.create({
       data: {
         quoteId: quote.id,
@@ -74,8 +99,18 @@ export async function POST(
            projectName: quote.projectName,
            companyName: quote.companyName,
         }),
-        signature: signature || "Aprobación Electrónica Segura",
-        signedAt: new Date()
+        signature: signerEmail
+          ? `Firma Digital Verificada — ${signerEmail}`
+          : (signature || "Aprobación Electrónica Segura"),
+        signedAt: new Date(),
+        metadata: JSON.stringify({
+          clientEmail: signerEmail,
+          clientName: signerName,
+          ipAddress,
+          userAgent,
+          signedAt,
+          authMethod: signerEmail ? 'Google OAuth 2.0' : 'Direct',
+        }),
       }
     });
 
@@ -106,7 +141,10 @@ export async function POST(
       }),
     }).catch(() => { /* Silencioso si el API Hub no está disponible */ });
 
-    return NextResponse.json({ success: true, quote: updatedQuote, contract });
+    const response = NextResponse.json({ success: true, quote: updatedQuote, contract });
+    // Clear the client_signer cookie now that the contract is signed
+    response.cookies.set('client_signer', '', { maxAge: 0, path: '/' });
+    return response;
   } catch (error: any) {
     console.error('Error approving quote:', error);
     return NextResponse.json({ error: 'Error al aprobar la cotización', details: error.stack || String(error) }, { status: 500 });

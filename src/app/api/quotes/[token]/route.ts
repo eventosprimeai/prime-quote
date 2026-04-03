@@ -68,44 +68,79 @@ export async function PUT(
     const body = await request.json();
 
     const quote = await db.quote.findUnique({
-      where: { token }
+      where: { token },
+      include: { customSections: true }
     });
 
     if (!quote) {
       return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 });
     }
 
-    // Update quote
+    // Anti-fraud: reject edits on signed contracts
+    if (quote.status === 'accepted') {
+      return NextResponse.json({ error: 'No se puede editar una cotización con contrato firmado. Use la función de extensión.' }, { status: 403 });
+    }
+
+    // Build update data
+    const updateData: any = {};
+    if (body.companyName !== undefined) updateData.companyName = body.companyName;
+    if (body.contactName !== undefined) updateData.contactName = body.contactName;
+    if (body.email !== undefined) updateData.email = body.email;
+    if (body.phone !== undefined) updateData.phone = body.phone;
+    if (body.projectName !== undefined) updateData.projectName = body.projectName;
+    if (body.internalNotes !== undefined) updateData.internalNotes = body.internalNotes;
+    if (body.projectPrice !== undefined) updateData.projectPrice = body.projectPrice;
+    if (body.quoteType !== undefined) updateData.quoteType = body.quoteType;
+    if (body.percentageValue !== undefined) updateData.percentageValue = body.percentageValue;
+    if (body.currency !== undefined) updateData.currency = body.currency;
+    if (body.paymentLink !== undefined) updateData.paymentLink = body.paymentLink;
+    if (body.logoUrl !== undefined) updateData.logoUrl = body.logoUrl;
+    if (body.themeColor !== undefined) updateData.themeColor = body.themeColor;
+    if (body.status !== undefined && body.status !== 'accepted') updateData.status = body.status;
+    if (body.validUntil !== undefined) updateData.validUntil = body.validUntil ? new Date(body.validUntil) : null;
+
+    // Update legacy sections if provided
+    if (body.sections) {
+      updateData.sections = {
+        update: body.sections.map((s: { id: string; title: string; content: string; isVisible: boolean }) => ({
+          where: { id: s.id },
+          data: { title: s.title, content: s.content, isVisible: s.isVisible }
+        }))
+      };
+    }
+
+    // Update quote base fields
     const updatedQuote = await db.quote.update({
       where: { token },
-      data: {
-        companyName: body.companyName,
-        contactName: body.contactName,
-        email: body.email,
-        phone: body.phone,
-        projectName: body.projectName,
-        internalNotes: body.internalNotes,
-        projectPrice: body.projectPrice,
-        currency: body.currency,
-        status: body.status,
-        validUntil: body.validUntil ? new Date(body.validUntil) : null,
-        sections: body.sections ? {
-          update: body.sections.map((s: { id: string; title: string; content: string; isVisible: boolean }) => ({
-            where: { id: s.id },
-            data: {
-              title: s.title,
-              content: s.content,
-              isVisible: s.isVisible
-            }
+      data: updateData,
+    });
+
+    // Replace custom sections if provided (delete all existing + create new)
+    if (body.customSections) {
+      await db.customSection.deleteMany({ where: { quoteId: quote.id } });
+      if (body.customSections.length > 0) {
+        await db.customSection.createMany({
+          data: body.customSections.map((cs: any, index: number) => ({
+            quoteId: quote.id,
+            title: cs.title,
+            content: cs.content || null,
+            imageUrl: cs.imageUrl || null,
+            order: cs.order ?? index + 1,
           }))
-        } : undefined
-      },
+        });
+      }
+    }
+
+    // Re-fetch with all relations
+    const finalQuote = await db.quote.findUnique({
+      where: { token },
       include: {
-        sections: true
+        sections: true,
+        customSections: { orderBy: { order: 'asc' } },
       }
     });
 
-    return NextResponse.json(updatedQuote);
+    return NextResponse.json(finalQuote);
   } catch (error) {
     console.error('Update quote error:', error);
     return NextResponse.json({ error: 'Error al actualizar cotización' }, { status: 500 });
